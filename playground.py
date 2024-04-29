@@ -34,15 +34,33 @@ class Network:
 
         for node in self.nodes:
             #create connection from individual node to other nodes
-            for _ in range(random.randint(0, max_number_of_connection_pr_node)):
-                self.connections.append(Connection(node.node_id, random.randint(0, number_of_nodes)))
-                #  HUSK!!! LIGE NU KAN DEN LAVE FLERE CONNECTION TIL SAMME NABO, DET MÅ DEN IKKE KUNNE
-                # OGSÅ HUSK AT GENERATE ETX VÆRDIER
+            exclude_con_to = [node.node_id] #exclude connection to itself
+            for _ in range(random.randint(1, max_number_of_connection_pr_node)): #its a network so min connections are 1
+                connection_to = random.choice([x for x in range(number_of_nodes) if x not in exclude_con_to]) # choose at random who the node should have connection to
+                self.connections.append(Connection(node.node_id, connection_to))
+                exclude_con_to.append(connection_to) # update exclude_con_to list as to not create multiple connections to same node later
 
+                # OGSÅ HUSK AT GENERATE ETX VÆRDIER TIL CONNECTIONEN
+    
+    def plot(self):
+        # create networkx nodes og edges udfra vores Node og Connection setup
+
+        G = nx.Graph()
+
+        # translate from our Nodes/Connections setup to networkx nodes and edges
         for node in self.nodes:
-            print(node.rank)
+            G.add_node(node.node_id)
         for connection in self.connections:
-            print(f"Connection from node: {connection.from_node} to node:{connection.to_node}")
+            G.add_edge(connection.from_node, connection.to_node)
+        
+        nx.draw(G, with_labels = True)
+        plt.show()
+            
+
+        # for node in self.nodes:
+        #     print(node.rank)
+        # for connection in self.connections:
+        #     print(f"Connection from node: {connection.from_node} to node:{connection.to_node}")
         
 
     #SKAL HAVE NOGET TIL AT LAVE NETWORK 
@@ -83,7 +101,11 @@ def main():
 
 
     nw = Network()
-    nw.generate_nodes_and_edges(10, 5)
+    nw.generate_nodes_and_edges(20, 3)
+    nw.plot()
+
+
+    #UPDATE, VI ER NØDT TIL AT LAVE ET AFSTANDSCONCEPT... ELLERS VIRKER DET SIMPELHEN IKKE ORDENTLIG...
 
     # Create an environment and start the setup process
     env = simpy.Environment()
@@ -100,8 +122,8 @@ def main():
 
 
 
-def plot_network(network: Network):
-    pass
+# def plot_network(network: Network):
+#     pass
 
 
 def plot_dodag(): #SKAL HAVE DODAG CLASS SOM INPUT? TBD  (dodag: Dodag)
