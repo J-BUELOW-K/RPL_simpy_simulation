@@ -2,17 +2,11 @@ import simpy
 
 import networkx as nx
 import matplotlib.pyplot as plt
-import random
-
-NETWORKGRID_DIMENSION_X = 300
-NETWORKGRID_DIMENSION_Y = 300
 
 class Node:
 
-    def __init__(self, node_id, position: tuple[int, int], rank = 999):
+    def __init__(self, node_id, rank = 999):
         self.node_id = node_id
-        self.pos_x = position[0]
-        self.pox_y = position[1]
         self.rank = rank
 
     def set_rank(self, rank):
@@ -34,17 +28,26 @@ class Connection:
 class Network:
     # https://networkx.org/documentation/stable/auto_examples/drawing/plot_random_geometric_graph.html 
 
-    def __init__(self, dimensions: tuple[int, int]):
+    def __init__(self):
         # self.dimension_x = dimensions[0]
         # self.dimension_y = dimensions[1] 
-        self.nodes = []
-        self.connections = []
+        #self.nodes = [] 
+        #self.connections = []
+        pass
 
     def generate_nodes_and_edges(self, number_of_nodes: int, radius: float, seed = None):
 
+        # Generate geometric network (nodes are places at random, edges are drawn if within radius):
         self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)
 
-
+        # tranlate networkx nodes/edges to our own nodes/connections setup (to make them easier to work with):
+        self.nodes = [Node(node_id = x) for x in self.networkx_graph.nodes()]
+        self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
+        # self.nodes = self.networkx_graph.nodes())
+        for node in self.nodes:
+            print(node.node_id)
+        for connection in self.connections:
+            print(f"Connection from node: {connection.from_node} to node:{connection.to_node}")
 
     
         # for node_id in range(number_of_nodes):
@@ -122,9 +125,9 @@ def main():
     # nx.draw_networkx_nodes(G, pos, node_size=80,)
     # plt.show()
 
-    # nw = Network()
-    # nw.generate_nodes_and_edges(20, 3)
-    # nw.plot()
+    nw = Network()
+    nw.generate_nodes_and_edges(70, 0.2)
+    nw.plot()
 
 
     #UPDATE, VI ER NØDT TIL AT LAVE ET AFSTANDSCONCEPT... ELLERS VIRKER DET SIMPELHEN IKKE ORDENTLIG...
