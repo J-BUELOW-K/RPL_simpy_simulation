@@ -1,11 +1,7 @@
 
-import random
-import numpy as np
-import simpy
 
 
-
-class dio_message:
+class dio_packet:
     # DIO messages used to advertise a DODAG and its characteristics
 
     # Format of the DIO Base Object
@@ -28,20 +24,15 @@ class dio_message:
 
     # Options has been omitted
 
-    def __init__(self, RPLInstanceID, versionNumber, rank, grouped, mop, prf, dtsn, flags, dodagid):
+    def __init__(self, RPL_Instance_ID, version_Number, rank, grouped, mop, prf, dtsn, flags, dodag_id):
 
-        self.RPLInstanceID = RPLInstanceID 
-        self.versionNumber = versionNumber          
-        self.rank = rank                    # DAGRank
+        self.RPL_Instance_ID = RPL_Instance_ID 
+        self.version_Number = version_Number          
+        self.rank = rank                    
         self.grouped = grouped
         self.mop = mop
         self.prf = prf
         self.dtsn = dtsn
         self.flags = flags
-        self.dodagid = dodagid
+        self.dodag_id = dodag_id
 
-
-
-class dio:
-    
-    pass
