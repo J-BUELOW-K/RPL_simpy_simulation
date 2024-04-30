@@ -27,7 +27,7 @@ def estimate_etx(distance: float, model: str) -> float:
 
 
 class Node:
-    def __init__(self, node_id, xpos, ypos ,rank = 999):
+    def __init__(self, node_id, xpos, ypos, rank = 999):
         self.node_id = node_id
         self.rank = rank
         self.xpos = xpos  # used to estimate ETX
@@ -62,8 +62,7 @@ class Network:
     def generate_nodes_and_edges(self, number_of_nodes: int, radius: float, seed = None):
 
         # Generate geometric network (nodes are places at random, edges are drawn if within radius):
-        self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)
-
+        self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI KAN GODT LADE DEN STÅ OM NU
         # tranlate networkx nodes/edges to our own nodes/connections setup (to make them easier to work with):
         self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
         # self.nodes = [Node(node_id = x) for x in self.networkx_graph.nodes()] # does not include position

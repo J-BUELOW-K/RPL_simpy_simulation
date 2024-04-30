@@ -4,6 +4,7 @@ from network import *
 
 def main():
     print("hello world")
+    #plot_dodag()
 
     # Setup simulation
     env = simpy.Environment()
