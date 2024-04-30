@@ -33,7 +33,7 @@ class Node:
         self.xpos = xpos  # used to estimate ETX
         self.ypos = ypos  # used to estimate ETX
 
-    def set_rank(self, rank):
+    def set_rank(self, rank):   # TODO: DEN HER RANK SKAL VÆRE EN DEL AF DODAG. DEN HAR NOK IKKE NOGET MED VORES NETWÆRK AT GØRE
         self.rank = rank
 
     def send_to(self, asd):
@@ -72,7 +72,7 @@ class Network:
                                                                                               # note: node_id matches index in self.nodes array!
 
         # Select a root node by "random" (we simply choose the root with root_it 0):
-        self.nodes[0].rank = 0
+        self.nodes[0].rank = 0    # TODO: DEN HER RANK SKAL VÆRE EN DEL AF DODAG. DEN HAR NOK IKKE NOGET MED VORES NETWÆRK AT GØRE
 
         # Estimate relative ETX values for each connection:
         for connection in self.connections:

@@ -12,6 +12,8 @@ def main():
     nw.plot()
     nw.register_node_processes(env)
 
+    # TODO: VI SKAL HAVE EN MÅDE HVOR VORES NETWÆRK IKKE KAN HAVE NODE NETWÆRK DER "FLYVER" UDE I INGENTING, for hvis en af de nodes bliver valgt til root er vi fucked
+
     # Execute simulation
     env.run()
 
