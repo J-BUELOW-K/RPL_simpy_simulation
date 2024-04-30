@@ -55,23 +55,23 @@ class Node:
         self.rpl_instaces = [] # list of RPLIncances that the node is a part of (contains all dodags)
         self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
 
-    def add_to_connections_list(self, neighbor_id):
+    def add_to_neighbors_list(self, neighbor_id):
         self.neighbors.append(neighbor_id)
         pass
 
     def broadcast_message(self, msg):
         # broadcast message to all neighbors 
-        for neighbor in  self.neighbors:
+        for neighbor in self.neighbors:
             neighbor.input_msg_queue.put(msg)   # some simpy examples yield at put(), some dont
 
 
-    def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. skal nok i dodag.py filen for ikke at lav denne class for cluderet
+    def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
         pass
 
     def run(self, env):  # Simpy process
         while(True):
             #print(f"hehe: {self.node_id}")
-            yield env.timeout(2000) #placeholder Yield på send_timer OG input_msg_queue
+            yield env.timeout(2000) #placeholder Yield på send_timer(vores alternativ til tricle timer) OG input_msg_queue
 
 class Connection:
     def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
@@ -112,8 +112,8 @@ class Network:
         # Make all nodes aware of their neighbors:
         for connection in self.connections:
             # note: At network cration, connection/edges are NOT generated in both directions between nodes. Therefore, we inform both nodes in a connection about the neighboring node
-            self.nodes[connection.from_node].add_to_connections_list(self.nodes[connection.to_node])  # assumption: index in self.nodes array matches node_id
-            self.nodes[connection.to_node].add_to_connections_list(self.nodes[connection.from_node])  # assumption: index in self.nodes array matches node_id
+            self.nodes[connection.from_node].add_to_neighbors_list(self.nodes[connection.to_node])  # assumption: index in self.nodes array matches node_id
+            self.nodes[connection.to_node].add_to_neighbors_list(self.nodes[connection.from_node])  # assumption: index in self.nodes array matches node_id
 
 
         for connection in self.connections:
