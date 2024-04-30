@@ -22,6 +22,9 @@ def estimate_etx(distance: float, model: str) -> float:
                                         # https://hal.science/hal-01165655/document
     # HOWEVER, as we just use the ETX to compare against other ETX values, it only needs to be relative to itself.
     # Note: this also means tht we CANT think of our specific ETX value as "expected transmission count"
+    # Note: if we acutally wanted to compare the performance of DODAGS created with different metrics (e.g. hop distance vs etx),
+    #       then this etx value would have actually match "expected transmission count" and should be acounted for when sending messages between nodes.
+    #       However, such performence tests is beyond the scope of this simulation. We want to simulate DODAG contruction.
 
 
 class Node:
@@ -143,120 +146,3 @@ class Network:
         # #Draw nodes and edges (Note: this figure does not match the actual x and y values of each node)
         # nx.draw(G, with_labels = True)
         # plt.show()
-
-
-            
-
-
-
-def main():
-    print("hello world")
-
-    # Setup simulation
-    env = simpy.Environment()
-    nw = Network()
-    nw.generate_nodes_and_edges(70, 0.2)
-    nw.plot()
-    nw.register_node_processes(env)
-
-    # Execute simulation
-    env.run()
-
-
-    #Vi leder efter Geometric grapghs!
-    # https://networkx.org/documentation/stable/reference/generators.html
-    # HER ER VIGTIG GUIDE: https://networkx.org/documentation/stable/auto_examples/drawing/plot_random_geometric_graph.html 
-
-    #G = nx.binomial_graph(20, 0.2)
-    #G = nx.barabasi_albert_graph(50, 0.2)
-    # n = 40
-    # #pos = {i: (random.gauss(0, 2), random.gauss(0, 2)) for i in range(n)}
-    # G = nx.random_geometric_graph(n, 0.3)
-    # nx.draw(G, with_labels = True)
-    # plt.show()
-
-    # Use seed when creating the graph for reproducibility
-    # G = nx.random_geometric_graph(70, 0.2, seed=896803)
-    # # position is stored as node attribute data for random_geometric_graph
-    # pos = nx.get_node_attributes(G, "pos") # pos er et dict!
-    # nx.draw_networkx_edges(G, pos)
-    # nx.draw_networkx_nodes(G, pos, node_size=80,)
-    # plt.show()
-
-
-
-
-    #UPDATE, VI ER NØDT TIL AT LAVE ET AFSTANDSCONCEPT... ELLERS VIRKER DET SIMPELHEN IKKE ORDENTLIG...
-    # så skal max_number_of_connection_pr_node nok også udskiftet med noget node_signal_range_base hvor jeg så +- noget random for at variabere deres signalstyrke lidt. tænk over hvordan det relatere til ETX
-
-
-
-# class testy:
-
-#     def __init__(self, env, okaya):
-#         self.env = env
-#         self.okaya = okaya
-#         pass
-
-#     def testyy(self, asd2):
-#         pass
-
-#     def testy_process(self):
-#         self.env.timeout(2000)
-
-# def test_process(env, yapper):
-
-#     while True:
-#         yield env.timeout(1000)
-#         print(yapper)
-
-
-
-
-
-
-
-# def plot_network(network: Network):
-#     pass
-
-
-def plot_dodag(): #SKAL HAVE DODAG CLASS SOM INPUT? TBD  (dodag: Dodag)
-    G = nx.DiGraph()
-    #G.add_node(1)
-    #G.add_node("davs")
-    # #G.add_node(3)
-    # G.add_edge(1,2)
-    # #G.add_edge(2,3)
-    # G.add_edge(3,2)
-    # G.add_edge(3,3)
-
-    G.add_node(1)
-    G.add_node(2)
-    G.add_node(3)
-    G.add_node(4)
-    G.add_node(5)
-
-    G.add_edge(1,2)
-    G.add_edge(2,3)
-    G.add_edge(5,1)
-    G.add_edge(4,2)
-
-    G_triangle = nx.DiGraph([(2, 1), (3, 1), (4, 1), (5,2)])
-
-    #G = nx.petersen_graph()
-    #subax1 = plt.subplot(121)
-    #subax1 = plt.subplot(121)
-    #nx.draw(G,with_labels=True)
-    #nx.draw_planar(G_triangle,with_labels=True)
-    #nx.draw(G_triangle,pos=nx.multipartite_layout(G_triangle),with_labels=True)
-    G = nx.DiGraph([(1, 0), (2, 0), (3, 0), (4, 2),(5, 3)])
-    layers = {"b": [4,5], "c": [1,2,3], "d": [0]}  #når jeg skal gøre det automatisk. start med tomt array. så bare brug rank til at start fra bunden og op, hvor jeg appender hver lag
-    pooos = nx.multipartite_layout(G, subset_key=layers, align="horizontal")
-    nx.draw(G,pos=pooos,with_labels=True)
-
-    #VI SKAL NOK BRUGE DRAW MED POS = multipartite_layout() TIL AT TEGNE DAGS https://networkx.org/documentation/stable/auto_examples/graph/plot_dag_layout.html
-    plt.show()
-
-
-if __name__ == '__main__':
-    main()
