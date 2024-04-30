@@ -43,10 +43,11 @@ class Node:
             yield env.timeout(2000) #placeholder
 
 class Connection:
-    def __init__(self, from_node, to_node, etx_value = 999):
+    def __init__(self, from_node, to_node, etx_value = 999, distance = 999):
         self.from_node = from_node
         self.to_node = to_node
         self.etx_value = etx_value
+        self.distance = distance
 
 class Network:
     # https://networkx.org/documentation/stable/auto_examples/drawing/plot_random_geometric_graph.html 
@@ -65,6 +66,9 @@ class Network:
         #self.nodes = [Node(node_id = x) for x in self.networkx_graph.nodes()]
         for node in self.networkx_graph.nodes(data="pos"):
             self.nodes.append(Node(node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
+                                                                                              # note: node_id matches index in self.nodes array!
+        # for node in self.nodes:
+        #     print(f"xpos:{node.xpos}  ypos:{node.ypos}")
 
         self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
         # self.nodes = self.networkx_graph.nodes())
@@ -72,13 +76,17 @@ class Network:
         # Select a root node by "random" (we simply choose the root with root_it 0):
         self.nodes[0].rank = 0
 
-        print(self.networkx_graph.nodes(data="pos"))
-        # for connection in self.connections:
+        # Estimate relative ETX values for each connection:
+        for connection in self.connections:
         #     print(self.networkx_graph.edges(data=True))
-            #distance =   # DEN HER SKAL VÆRE EN DEN AF CONNECTION OBJEKTET
-            #connection.etx_value = estimate_etx(distance, "fspl")
-            
-            
+            a = self.nodes[connection.from_node].xpos  # assumption: index in self.nodes array matches node_id
+            b = self.nodes[connection.to_node].ypos    # assumption: index in self.nodes array matches node_id
+            connection.distance = math.sqrt(a**2 + b**2) # pythagoras
+            connection.etx_value = estimate_etx(connection.distance, "fspl")
+            print(f"distance:{connection.distance}  etx:{connection.etx_value}")
+
+            # TODO OVERVEJ OM NODE POS OG CONNECTION DISTANCE IKKE SKAL VÆRE EN DEL AF KLASSEN, HVIS DE ALIGEVEL KUN SKAL BRUGES HER - SÅ DE IKKE SKABER FORVIRING
+            # "to avoid cluttering the class with variables which is only used here"
 
 
         # TODO HUSK AT GENERATE ETX VÆRDIER TIL CONNECTIONEN
