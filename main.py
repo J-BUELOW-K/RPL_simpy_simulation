@@ -39,29 +39,6 @@ def main():
 
 
 
-    #UPDATE, VI ER NØDT TIL AT LAVE ET AFSTANDSCONCEPT... ELLERS VIRKER DET SIMPELHEN IKKE ORDENTLIG...
-    # så skal max_number_of_connection_pr_node nok også udskiftet med noget node_signal_range_base hvor jeg så +- noget random for at variabere deres signalstyrke lidt. tænk over hvordan det relatere til ETX
-
-
-
-# class testy:
-
-#     def __init__(self, env, okaya):
-#         self.env = env
-#         self.okaya = okaya
-#         pass
-
-#     def testyy(self, asd2):
-#         pass
-
-#     def testy_process(self):
-#         self.env.timeout(2000)
-
-# def test_process(env, yapper):
-
-#     while True:
-#         yield env.timeout(1000)
-#         print(yapper)
 
 
 
@@ -69,11 +46,10 @@ def main():
 
 
 
-# def plot_network(network: Network):
-#     pass
 
 
-def plot_dodag(): #SKAL HAVE DODAG CLASS SOM INPUT? TBD  (dodag: Dodag)
+
+def plot_dodag(): # SKAL NOK VÆRE EN METHOD I DODAG CLASSEN
     G = nx.DiGraph()
     #G.add_node(1)
     #G.add_node("davs")
