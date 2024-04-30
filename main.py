@@ -1,6 +1,7 @@
 import simpy
 from network import *
 
+SIM_TIME = 1000
 
 def main():
     print("hello world")
@@ -8,7 +9,7 @@ def main():
 
     # Setup simulation
     env = simpy.Environment()
-    nw = Network()
+    nw = Network(env)
     nw.generate_nodes_and_edges(70, 0.2)
     nw.plot()
     nw.register_node_processes(env)
@@ -16,7 +17,7 @@ def main():
     # TODO: VI SKAL HAVE EN MÅDE HVOR VORES NETWÆRK IKKE KAN HAVE NODE NETWÆRK DER "FLYVER" UDE I INGENTING, for hvis en af de nodes bliver valgt til root er vi fucked
 
     # Execute simulation
-    env.run()
+    env.run(until=SIM_TIME)
 
 
     #Vi leder efter Geometric grapghs!

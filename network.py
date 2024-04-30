@@ -37,22 +37,41 @@ class Node:
 
     # TODO tilføj contrains liste
 
-    def __init__(self, node_id, xpos, ypos):
+    # lav funktion et sted til at broadcast til alle connection (tager senderens node_id som input)
+    # HUSK, man skal ikke kun yeild på put(), men også get() (e.g. yield store.put(f'spam {i}'))
+    #    hmm... men i Process Communication example yielder de ikke på put. det kommer nok an på om man vil sidde stuck indtil den er sendt, eller bare komme videre idk
+    # Problem. hvordan tingår en node andre nodes input queues. er det ikke kun noget netwærk objektet kan?? tænk over det
+
+    def __init__(self, env, node_id, xpos, ypos):
+
+        # Physical network values:
+        self.env = env
         self.node_id = node_id
         self.xpos = xpos  # used to estimate ETX
         self.ypos = ypos  # used to estimate ETX
-        self.rpl_instaces = []
+        self.neighbors = [] # list of all neighboring nodes (aka other nodes which this node has a connection/edge to). This list is filled with other Node objects
 
-    def set_rank(self, rank):   # TODO: DEN HER RANK SKAL VÆRE EN DEL AF DODAG. DEN HAR NOK IKKE NOGET MED VORES NETWÆRK AT GØRE
-        self.rank = rank
+        # RPL values:_
+        self.rpl_instaces = [] # list of RPLIncances that the node is a part of (contains all dodags)
+        self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
 
-    def send_to(self, asd):
+    def add_to_connections_list(self, neighbor_id):
+        self.neighbors.append(neighbor_id)
+        pass
+
+    def broadcast_message(self, msg):
+        # broadcast message to all neighbors 
+        for neighbor in  self.neighbors:
+            neighbor.input_msg_queue.put(msg)   # some simpy examples yield at put(), some dont
+
+
+    def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. skal nok i dodag.py filen for ikke at lav denne class for cluderet
         pass
 
     def run(self, env):  # Simpy process
         while(True):
             #print(f"hehe: {self.node_id}")
-            yield env.timeout(2000) #placeholder
+            yield env.timeout(2000) #placeholder Yield på send_timer OG input_msg_queue
 
 class Connection:
     def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
@@ -64,7 +83,8 @@ class Connection:
 class Network:
     # https://networkx.org/documentation/stable/auto_examples/drawing/plot_random_geometric_graph.html 
 
-    def __init__(self):
+    def __init__(self, env):
+        self.env = env
         self.nodes = []
         self.connections = [] # this line is not strickly needed (is here for completeness)
         pass
@@ -72,16 +92,14 @@ class Network:
     def generate_nodes_and_edges(self, number_of_nodes: int, radius: float, seed = None):
 
         # Generate geometric network (nodes are places at random, edges are drawn if within radius):
-        self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI KAN GODT LADE DEN STÅ OM NU
+        self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI LADER DEN BARE STÅ
+
         # tranlate networkx nodes/edges to our own nodes/connections setup (to make them easier to work with):
         self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
         # self.nodes = [Node(node_id = x) for x in self.networkx_graph.nodes()] # does not include position
         for node in self.networkx_graph.nodes(data="pos"):
-            self.nodes.append(Node(node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
+            self.nodes.append(Node(self.env, node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
                                                                                               # note: node_id matches index in self.nodes array!
-
-        # Select a root node by "random" (we simply choose the root with root_it 0):
-        self.nodes[0].rank = 0    # TODO: DEN HER RANK SKAL VÆRE EN DEL AF DODAG. DEN HAR NOK IKKE NOGET MED VORES NETWÆRK AT GØRE
 
         # Estimate relative ETX values for each connection:
         for connection in self.connections:
@@ -89,7 +107,17 @@ class Network:
             b = self.nodes[connection.to_node].ypos    # assumption: index in self.nodes array matches node_id
             connection.distance = math.sqrt(a**2 + b**2) # pythagoras
             connection.etx_value = estimate_etx(connection.distance, "fspl")
-            print(f"distance:{connection.distance}  etx:{connection.etx_value}")
+            #print(f"distance:{connection.distance}  etx:{connection.etx_value}")
+
+        # Make all nodes aware of their neighbors:
+        for connection in self.connections:
+            # note: At network cration, connection/edges are NOT generated in both directions between nodes. Therefore, we inform both nodes in a connection about the neighboring node
+            self.nodes[connection.from_node].add_to_connections_list(self.nodes[connection.to_node])  # assumption: index in self.nodes array matches node_id
+            self.nodes[connection.to_node].add_to_connections_list(self.nodes[connection.from_node])  # assumption: index in self.nodes array matches node_id
+
+
+        for connection in self.connections:
+            print(f"connection from:{connection.from_node} to:{connection.to_node}")
 
     def register_node_processes(self, env):
         for node in self.nodes:
