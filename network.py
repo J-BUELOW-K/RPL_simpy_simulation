@@ -7,6 +7,9 @@ import math
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
 
+MAX_ETX = 0xFFFF
+MAX_DISTANCE = 0xFFFF
+
 def estimate_etx(distance: float, model: str) -> float:
     # ETX calc is not specific, however is it usually calculated as: ETX = 1 / (Df*Dr) 
                                         # where Df is the measured probability that a packet is received by the neighbor and Dr is 
@@ -27,11 +30,18 @@ def estimate_etx(distance: float, model: str) -> float:
 
 
 class Node:
-    def __init__(self, node_id, xpos, ypos, rank = 999):
+
+    # MÅSKE ET TUPLE med Dodag object og tilhørende rank. eller skal rank være de del af dodag objetktet?
+    
+    # Liste med Rpl_Instances (inde i den er listen DODAGS)
+
+    # TODO tilføj contrains liste
+
+    def __init__(self, node_id, xpos, ypos):
         self.node_id = node_id
-        self.rank = rank
         self.xpos = xpos  # used to estimate ETX
         self.ypos = ypos  # used to estimate ETX
+        self.rpl_instaces = []
 
     def set_rank(self, rank):   # TODO: DEN HER RANK SKAL VÆRE EN DEL AF DODAG. DEN HAR NOK IKKE NOGET MED VORES NETWÆRK AT GØRE
         self.rank = rank
@@ -45,7 +55,7 @@ class Node:
             yield env.timeout(2000) #placeholder
 
 class Connection:
-    def __init__(self, from_node, to_node, etx_value = 9999, distance = 9999):
+    def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
         self.from_node = from_node
         self.to_node = to_node
         self.etx_value = etx_value

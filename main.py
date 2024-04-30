@@ -86,6 +86,8 @@ def plot_dodag(): # SKAL NOK VÆRE EN METHOD I DODAG CLASSEN
     pooos = nx.multipartite_layout(G, subset_key=layers, align="horizontal")
     nx.draw(G,pos=pooos,with_labels=True)
 
+    # ER RET SIKKER PÅ VI SKAL BRUGE intergar part of rank (aka dag_rank_macro()) når vi plotter!!!!! Ikke den fulde float rank!
+
     #VI SKAL NOK BRUGE DRAW MED POS = multipartite_layout() TIL AT TEGNE DAGS https://networkx.org/documentation/stable/auto_examples/graph/plot_dag_layout.html
     plt.show()
 
