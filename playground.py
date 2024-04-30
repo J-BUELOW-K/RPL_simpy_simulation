@@ -2,12 +2,34 @@ import simpy
 
 import networkx as nx
 import matplotlib.pyplot as plt
+import math
+
+SPEED_OF_LIGHT = 299792458
+LINK_FREQ = 2.4 * pow(10, 9)  # Hz
+
+def estimate_etx(distance: float, model: str) -> float:
+    if model == "linear":
+        pass
+        return 999 #placeholder
+    elif model == "fspl":
+        fspl = pow((4*math.pi*distance*LINK_FREQ) / SPEED_OF_LIGHT, 2)  # https://en.wikipedia.org/wiki/Free-space_path_loss
+        return fspl
+
+    # ETX calc is not specific, however is it usually calculated as: ETX = 1 / (Df*Dr) 
+                                        # where Df is the measured probability that a packet is received by the neighbor and Dr is 
+                                        # the measured probability that the acknowledgment packet is successfully received.
+                                        # https://datatracker.ietf.org/doc/html/rfc6551#page-21)
+                                        # https://hal.science/hal-01165655/document
+    # HOWEVER, as we just use the ETX to compare against other ETX values, it only needs to be relative to itself.
+    # Note: this also means tht we CANT think of our specific ETX value as "expected transmission count"
+
 
 class Node:
-
-    def __init__(self, node_id, rank = 999):
+    def __init__(self, node_id, xpos, ypos ,rank = 999):
         self.node_id = node_id
         self.rank = rank
+        self.xpos = xpos  # used to estimate ETX
+        self.ypos = ypos  # used to estimate ETX
 
     def set_rank(self, rank):
         self.rank = rank
@@ -17,7 +39,8 @@ class Node:
 
     def run(self, env):  # Simpy process
         while(True):
-            pass
+            #print(f"hehe: {self.node_id}")
+            yield env.timeout(2000) #placeholder
 
 class Connection:
     def __init__(self, from_node, to_node, etx_value = 999):
@@ -29,10 +52,8 @@ class Network:
     # https://networkx.org/documentation/stable/auto_examples/drawing/plot_random_geometric_graph.html 
 
     def __init__(self):
-        # self.dimension_x = dimensions[0]
-        # self.dimension_y = dimensions[1] 
-        #self.nodes = [] 
-        #self.connections = []
+        self.nodes = []
+        self.connections = [] # this line is not strickly needed (is here for completeness)
         pass
 
     def generate_nodes_and_edges(self, number_of_nodes: int, radius: float, seed = None):
@@ -41,13 +62,36 @@ class Network:
         self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)
 
         # tranlate networkx nodes/edges to our own nodes/connections setup (to make them easier to work with):
-        self.nodes = [Node(node_id = x) for x in self.networkx_graph.nodes()]
+        #self.nodes = [Node(node_id = x) for x in self.networkx_graph.nodes()]
+        for node in self.networkx_graph.nodes(data="pos"):
+            self.nodes.append(Node(node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
+
         self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
         # self.nodes = self.networkx_graph.nodes())
-        for node in self.nodes:
-            print(node.node_id)
-        for connection in self.connections:
-            print(f"Connection from node: {connection.from_node} to node:{connection.to_node}")
+
+        # Select a root node by "random" (we simply choose the root with root_it 0):
+        self.nodes[0].rank = 0
+
+        print(self.networkx_graph.nodes(data="pos"))
+        # for connection in self.connections:
+        #     print(self.networkx_graph.edges(data=True))
+            #distance =   # DEN HER SKAL VÆRE EN DEN AF CONNECTION OBJEKTET
+            #connection.etx_value = estimate_etx(distance, "fspl")
+            
+            
+
+
+        # TODO HUSK AT GENERATE ETX VÆRDIER TIL CONNECTIONEN
+        # TODO EN NODE SKAL VÆLGES TIL ROOT (giv den rank 0) - bare en tilfældig
+        # TODO skal vi emulere packet loss?? altså at der er en x risiko for at vi ikke sender beskeden afsted, hvis vi prøver packet_loss_propability
+                # vi kan måske udregne ETX = 1 / Df  (Df is the measured probability that a packet is received by the neighbor)
+                # og så bestemme Df udfra afstanden. Jo tættere conenction afstand er på radius, jo tættet Df --> 0
+                # 
+
+        # for node in self.nodes:
+        #     print(node.node_id)
+        # for connection in self.connections:
+        #     print(f"Connection from node: {connection.from_node} to node:{connection.to_node}")
 
     
         # for node_id in range(number_of_nodes):
@@ -63,14 +107,12 @@ class Network:
 
         #         #UPDATE: gnp_random_graph gør vidst basically det jeg har gang i her...
 
-        #         # TODO HUSK AT GENERATE ETX VÆRDIER TIL CONNECTIONEN
+        #         
 
+    def register_node_processes(self, env):
+        for node in self.nodes:
+            env.process(node.run(env))
 
-                
-        # for node in self.nodes:
-        #     print(node.rank)
-        # for connection in self.connections:
-        #     print(f"Connection from node: {connection.from_node} to node:{connection.to_node}")
     
     def plot(self):
         pos = nx.get_node_attributes(self.networkx_graph, "pos") # pos er et dict!
@@ -103,7 +145,15 @@ def main():
     print("hello world")
 
     # Setup simulation
-    pass
+    env = simpy.Environment()
+    nw = Network()
+    nw.generate_nodes_and_edges(70, 0.2)
+    nw.plot()
+    nw.register_node_processes(env)
+
+    # Execute simulation
+    env.run()
+
 
     #Vi leder efter Geometric grapghs!
     # https://networkx.org/documentation/stable/reference/generators.html
@@ -125,20 +175,13 @@ def main():
     # nx.draw_networkx_nodes(G, pos, node_size=80,)
     # plt.show()
 
-    nw = Network()
-    nw.generate_nodes_and_edges(70, 0.2)
-    nw.plot()
+
 
 
     #UPDATE, VI ER NØDT TIL AT LAVE ET AFSTANDSCONCEPT... ELLERS VIRKER DET SIMPELHEN IKKE ORDENTLIG...
     # så skal max_number_of_connection_pr_node nok også udskiftet med noget node_signal_range_base hvor jeg så +- noget random for at variabere deres signalstyrke lidt. tænk over hvordan det relatere til ETX
 
-    # Create an environment and start the setup process
-    #env = simpy.Environment()
-    #env.process(test_process(env, "ja taak"))
 
-    # Execute simulation
-    #env.run()
 
 # class testy:
 
