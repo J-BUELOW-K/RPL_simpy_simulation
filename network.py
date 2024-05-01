@@ -10,6 +10,8 @@ LINK_FREQ = 2.4 * pow(10, 9)  # Hz
 MAX_ETX = 0xFFFF
 MAX_DISTANCE = 0xFFFF
 
+NODE_TRANSMIT_TIMER = 200 # Periodic transmit timer - in simpy time units
+
 def estimate_etx(distance: float, model: str) -> float:
     # ETX calc is not specific, however is it usually calculated as: ETX = 1 / (Df*Dr) 
                                         # where Df is the measured probability that a packet is received by the neighbor and Dr is 
@@ -54,6 +56,7 @@ class Node:
         # RPL values:_
         self.rpl_instaces = [] # list of RPLIncances that the node is a part of (contains all dodags)
         self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
+        self.silent_mode = True  # node will stay silent untill (this approach is mentioned as valid in the RPL standard)
 
     def add_to_neighbors_list(self, neighbor_object):
         self.neighbors.append(neighbor_object)
@@ -64,14 +67,27 @@ class Node:
         for neighbor in self.neighbors:
             neighbor.input_msg_queue.put(msg)   # some simpy examples yield at put(), some dont
 
+    def broadcast_dio(self):
+        #lav dio object (måske fra en funktion i en anden fil) # ænk over  hvordan den får info til at lave dio objekete. hvordan det lige virker...
+        # MÅSKE er broadcast_dio difineret i en anden fil (der hvor dio handleren er) - og så gør den fil bare brug af node_objectet.broadcast_message (skal man noden så passe sig selv? hvordan virker det? kan man passe "self" måske)
+        #broadcast_message(dio_object)
 
-    def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
-        pass
+    # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
+    #     pass
 
     def run(self, env):  # Simpy process
         while(True):
-            #print(f"hehe: {self.node_id}")
-            yield env.timeout(2000) #placeholder Yield på send_timer(vores alternativ til tricle timer) OG input_msg_queue
+            print(f"hehe: {self.node_id}")
+            if self.silent_mode == True:
+                message = yield self.input_msg_queue.get()
+                self.silent_mode = False
+                # msg_handler(message) # TODO
+            else: # if silent_mode = False
+                event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
+                if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
+                    # broadcast_dio() # TODO
+                else: # event was a "message in input_msg_queue" event
+                    # msg_handler(message)  # TODO
 
 class Connection:
     def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
@@ -92,7 +108,9 @@ class Network:
     def generate_nodes_and_edges(self, number_of_nodes: int, radius: float, seed = None):
 
         # Generate geometric network (nodes are places at random, edges are drawn if within radius):
-        self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI LADER DEN BARE STÅ
+        while(True):
+            self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI LADER DEN BARE STÅ
+            if nx.is_connected(self.networkx_graph): break #if graph is not connected, try again...
 
         # tranlate networkx nodes/edges to our own nodes/connections setup (to make them easier to work with):
         self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
@@ -116,8 +134,8 @@ class Network:
             self.nodes[connection.to_node].add_to_neighbors_list(self.nodes[connection.from_node])  # assumption: index in self.nodes array matches node_id
 
 
-        for connection in self.connections:
-            print(f"connection from:{connection.from_node} to:{connection.to_node}")
+        # for connection in self.connections:
+        #     print(f"connection from:{connection.from_node} to:{connection.to_node}")
 
     def register_node_processes(self, env):
         for node in self.nodes:
