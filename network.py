@@ -72,6 +72,9 @@ class Node:
         # MÅSKE er broadcast_dio difineret i en anden fil (der hvor dio handleren er) - og så gør den fil bare brug af node_objectet.broadcast_message (skal man noden så passe sig selv? hvordan virker det? kan man passe "self" måske)
         #broadcast_message(dio_object)
 
+        # TODO i OF0 "Selection of the Preferred Parent" Step 1, nævner de at en nabo skal overholder alle steps fra 8.2.1 i RPL standarden, før den overhoevedet kan overvejes i OF0.
+        # TODO Dio beskeder kan carry options - overvej om vi skal sende en metric object med dio beskederne (forskellige metric objekter er definineret i RFC 6551) (se sec 6.3.3 og 6.7.4 i RPL stanarden)
+
     # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
     #     pass
 
