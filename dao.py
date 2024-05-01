@@ -69,7 +69,7 @@ class DAO_ACK_message:
     # Options bit field has been omitted.
 
     def __init__(self, rpl_instance_id = 0, d = False, reserved = 0,\
-                 dao_sequence = 0, status = 0, dodag_id = None):
+                 dao_sequence = 0, status = None, dodag_id = None):
         
         self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
         self.d = d                                  # The 'D' flag indicates that the DODAGID field is present. This
@@ -93,4 +93,3 @@ class DAO_ACK_message:
         else:
             if self.dodag_id is not None:
                 raise ValueError("D flag not set. MUST be set when DODAGID field is used.")
-            
