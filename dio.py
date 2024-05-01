@@ -2,8 +2,7 @@
 
 class DIO_message:
 
-    """DODAG Information Object (DIO)"""
-    # 
+    """DODAG Information Object (DIO)""" 
 
     #     0                   1                   2                   3
     #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
