@@ -55,8 +55,8 @@ class Node:
         self.rpl_instaces = [] # list of RPLIncances that the node is a part of (contains all dodags)
         self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
 
-    def add_to_neighbors_list(self, neighbor_id):
-        self.neighbors.append(neighbor_id)
+    def add_to_neighbors_list(self, neighbor_object):
+        self.neighbors.append(neighbor_object)
         pass
 
     def broadcast_message(self, msg):
