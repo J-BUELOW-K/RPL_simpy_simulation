@@ -1,6 +1,6 @@
 import math
 
-
+import time
 
 
 
@@ -26,9 +26,11 @@ def dag_rank_macro(rank: float, MinHopRankIncrease: float) -> int: # Returns Int
 
 class Dodag:
 
-    def __init__(self, dodag_id, dodag_version_num, is_root = False):
+    def __init__(self, dodag_id, dodag_version_num, is_root = False, MinHopRankIncrease = 256.0):
         self.dodag_id = dodag_id
         self.dodag_version_num = dodag_version_num
+        self.MinHopRankIncrease = MinHopRankIncrease
+        self.last_dio = time.time()
 
         if is_root:
             self.rank = ROOT_RANK
@@ -38,6 +40,9 @@ class Dodag:
 
     def set_rank(self, rank):
         self.rank = rank
+        
+    def DAGRank(self, rank):
+        return math.floor(float(rank)/ self.MinHopRankIncrease)
 
     # er ikker sikker på om vi skal bruge float rank eller DAGRank() (interger part) her
 
