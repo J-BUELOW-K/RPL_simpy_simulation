@@ -38,6 +38,8 @@ class Dodag:
             self.rank = MAX_RANK
         self.rank 
 
+        # TODO der skal måske være noget herinde til at holde alt dodag info fra de andre nodes (info man får i DIO beskederne)(en liste)
+
     def set_rank(self, rank):
         self.rank = rank
         
