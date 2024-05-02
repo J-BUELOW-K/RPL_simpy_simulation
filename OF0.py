@@ -1,5 +1,6 @@
 from dodag import Dodag
-
+import network
+import defines
 
 
 
@@ -16,7 +17,7 @@ DEFAULT_RANK_FACTOR  = 1
 MINIMUM_RANK_FACTOR  = 1
 MAXIMUM_RANK_FACTOR  = 4
 
-
+MAX_ETX = network.estimate_etx(defines.RADIUS,'fspl')
 DEFAULT_MIN_HOP_RANK_INCREASE = 256
 
 # constant maximum for the Rank
@@ -37,7 +38,7 @@ class OF0:
         pass
     
     
-def compute_rank_increase(dodag, parent_rank:int=0):
+def compute_rank_increase(dodag, parent_rank:int=0, OF0:str='ETX'):
     # The step_of_rank Sp that is computed for that link is multiplied by
     # the rank_factor Rf and then possibly stretched by a term Sr that is
     # less than or equal to the configured stretch_of_rank.  The resulting
@@ -47,6 +48,11 @@ def compute_rank_increase(dodag, parent_rank:int=0):
         # R(N) = R(P) + rank_increase where:
 
         # rank_increase = (Rf*Sp + Sr) * MinHopRankIncrease
+        
+        #define STEP_OF_RANK(p)       (((3 * parent_link_metric(p)) / LINK_STATS_ETX_DIVISOR) - 2)
+        
+    if OF0 == 'ETX':
+        step_of_rank = (((3 * dodag.) / LINK_STATS_ETX_DIVISOR) - 2)
     
     rank_increase = (DEFAULT_RANK_FACTOR * DEFAULT_STEP_OF_RANK + DEFAULT_RANK_STRETCH) * dodag.MinHopRankIncrease
     if parent_rank+rank_increase > INFINITE_RANK:
@@ -71,7 +77,7 @@ def compute_preferred_parent(dodag, neighbors:list):
     
     ...
     
-def compare_parent(parent_1, parent_2):
+def compare_parent(parent_1:object, parent_2:object):
     # The parent that is selected as the preferred parent is the one that has the lowest rank among all the neighbors that have been heard within the last DIOInterval.
     
     # comparison only make sense within the same RPL instance
