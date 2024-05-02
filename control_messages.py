@@ -21,7 +21,7 @@ fx for dio message --> ICMP header + DIO + Options (hop/EXT)
 
 # Container
 # lave class til hop count object
-# TODO lave class til EXT reliability object
+# lave class til EXT reliability object
 
 # Lave dio message class
 # Lave dao message class
@@ -34,7 +34,7 @@ fx for dio message --> ICMP header + DIO + Options (hop/EXT)
 
 # Lave ICMP header class
 
-
+""" ICMP header implementation """
 
 class ICMP_header:
 
@@ -68,6 +68,9 @@ class ICMP_header:
         # TODO Check ICMP code. If unknown, the discard. 
 
 
+
+
+""" DIO, DAO and DAO ACK body implementations """
 
 class DIO:
 
@@ -204,6 +207,11 @@ class DAO_ACK:
     # use the standart DAG Metric Container Format. Only the Hop Count (HP) and ETX Reliability
     # Object are implemented. 
 
+
+
+
+""" DAG Metric Container implementations """
+
 class HP_OBJ():
     
     # The Hop Count (HP) object is used to report the number of traversed
@@ -232,6 +240,34 @@ class HP_OBJ():
 
 
 class ETX_OBJ():
-    pass
+    
+    # The ETX metric is the number of transmissions a node expects to make
+    # to a destination in order to successfully deliver a packet.
+    # In this project it is used as a metric which is used in the parent select process.
+
+    #     0                   1
+    #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |              ETX              |
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+    # according to RFC6551 the ETX value applies some encoding scheme. This is not used in this project.
+
+    def __init__(self, ETX):
+        
+        self.ETX = ETX                              # TODO Expected transmission count value. MUST be unsigned
 
     # Referce: https://datatracker.ietf.org/doc/html/rfc6551#section-4.3.2
+
+
+
+
+""" ICMP implementations """
+
+
+
+
+
+""" Packet implementation """
+
