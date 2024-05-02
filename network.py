@@ -51,21 +51,27 @@ class Node:
         self.node_id = node_id
         self.xpos = xpos  # used to estimate ETX
         self.ypos = ypos  # used to estimate ETX
-        self.neighbors = [] # list of all neighboring nodes (aka other nodes which this node has a connection/edge to). This list is filled with other Node objects
+        self.neighbors = [] # List of all neighboring nodes and associated connection objects (aka other nodes which this node has a connection/edge to) 
+                            # Each element is a tuple: (node object, connection object). 
+                            # This list has nothing to do with any RPLInstance or DODAG, its simply information about the physical network.
 
         # RPL values:_
         self.rpl_instaces = [] # list of RPLIncances that the node is a part of (contains all dodags)
         self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
         self.silent_mode = True  # node will stay silent untill (this approach is mentioned as valid in the RPL standard)
 
-    def add_to_neighbors_list(self, neighbor_object):
-        self.neighbors.append(neighbor_object)
+    def add_to_neighbors_list(self, neighbor_object, connection_object): # add a single neighbor to the self.neighbors list
+        self.neighbors.append((neighbor_object, connection_object))
         pass
 
     def broadcast_message(self, msg):
         # broadcast message to all neighbors 
         for neighbor in self.neighbors:
             neighbor.input_msg_queue.put(msg)   # some simpy examples yield at put(), some dont
+
+    # def debug_print_neighbors(self):
+    #     for nabo in self.neighbors:
+    #         print(f"neighbor node: {nabo[0].node_id}, conection to:{nabo[1].from_node}, connection to: {nabo[1].to_node}, etx: {nabo[1].etx_value}")
 
     def broadcast_dio(self):
         #lav dio object (måske fra en funktion i en anden fil) # ænk over  hvordan den får info til at lave dio objekete. hvordan det lige virker...
@@ -76,7 +82,7 @@ class Node:
         # TODO Dio beskeder kan carry options - overvej om vi skal sende en metric object med dio beskederne (forskellige metric objekter er definineret i RFC 6551) (se sec 6.3.3 og 6.7.4 i RPL stanarden)
 
     # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
-    #     pass
+         pass
 
     def run(self, env):  # Simpy process
         while(True):
@@ -89,8 +95,10 @@ class Node:
                 event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                     # broadcast_dio() # TODO
+                    pass
                 else: # event was a "message in input_msg_queue" event
                     # msg_handler(message)  # TODO
+                    pass
 
 class Connection:
     def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
@@ -133,9 +141,12 @@ class Network:
         # Make all nodes aware of their neighbors:
         for connection in self.connections:
             # note: At network cration, connection/edges are NOT generated in both directions between nodes. Therefore, we inform both nodes in a connection about the neighboring node
-            self.nodes[connection.from_node].add_to_neighbors_list(self.nodes[connection.to_node])  # assumption: index in self.nodes array matches node_id
-            self.nodes[connection.to_node].add_to_neighbors_list(self.nodes[connection.from_node])  # assumption: index in self.nodes array matches node_id
+            self.nodes[connection.from_node].add_to_neighbors_list(self.nodes[connection.to_node], connection)  # assumption: index in self.nodes array matches node_id
+            self.nodes[connection.to_node].add_to_neighbors_list(self.nodes[connection.from_node], connection)  # assumption: index in self.nodes array matches node_id
 
+
+        # for node in self.nodes:
+        #     node.debug_print_neighbors()
 
         # for connection in self.connections:
         #     print(f"connection from:{connection.from_node} to:{connection.to_node}")
