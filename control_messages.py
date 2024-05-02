@@ -288,17 +288,3 @@ class Packet:
         
         self.src_node_id = src_node_id
         self.payload = payload
-
-
-if __name__=="__main__":
-
-    MyVariable = ICMP_DIO(rpl_instance_id = 10,
-                          vers = 35,
-                          rank = 1,
-                          g_flag = True,
-                          dodag_id = 2
-                          )    
-
-    print(MyVariable.DIO.vers)
-
-    print("Hallo world!")
