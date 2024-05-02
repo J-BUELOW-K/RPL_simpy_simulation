@@ -166,42 +166,47 @@ class message:
     def __init__(self, code):
         
         self.code = code
-        self.msg = None
+        self.dio = None
+        self.dao = None
+        self.dao_ack = None
 
     def dis(self):
         pass
 
-    def dio(self, rpl_instance_id = 0, version = 0, rank = 0, g = False, mop = 0,\
+    def define_dio(self, rpl_instance_id = 0, version = 0, rank = 0, g = False, mop = 0,\
                  prf = None, dtsn = None, flags = 0, reserved = 0, dodag_id = 0, options = None):
         
         if not (self.code == defines.CODE_DIO):
             raise ValueError("Incorrect message code. MUST be a DIO message")
-        
-        self.msg = DIO_message(rpl_instance_id, version, rank, g, mop,\
+
+        self.dio = DIO_message(rpl_instance_id, version, rank, g, mop,\
                                prf, dtsn, flags, reserved, dodag_id, options)
 
-
-    def dao(self,rpl_instance_id = 0, k = False, d = False, flags = 0,\
+    def define_dao(self,rpl_instance_id = 0, k = False, d = False, flags = 0,\
                  reserved = 0, dao_sequence = 0, dodag_id = None, options = None):
 
         if not (self.code == defines.CODE_DAO):
             raise ValueError("Incorrect message code. MUST be a DAO message")
 
-        self.msg = DAO_message(rpl_instance_id, k, d, flags,\
+        self.dao = DAO_message(rpl_instance_id, k, d, flags,\
                                reserved, dao_sequence, dodag_id, options)
 
-    def dao_ack(self, rpl_instance_id = 0, d = False, reserved = 0,\
+    def define_dao_ack(self, rpl_instance_id = 0, d = False, reserved = 0,\
                  dao_sequence = 0, status = None, dodag_id = None, options = None):
 
         if not (self.code == defines.CODE_DAO_ACK):
             raise ValueError("Incorrect message code. MUST be a DAO ACK message")
 
-        self.msg = DAO_ACK_message(rpl_instance_id, d, reserved,\
+        self.dao_ack = DAO_ACK_message(rpl_instance_id, d, reserved,\
                                    dao_sequence, status, dodag_id, options)
+        
 
+if __name__ == "__main__":
+    message_dio = message(defines.CODE_DIO)
 
-if __name__=="main":
-    msg = message(defines.CODE_DAO)
+    message_dio.dio(rpl_instance_id = 1, version = 2, rank = 3, g = True, mop = 34,\
+            prf = 1, dtsn = 1, flags = 2, reserved = 31, dodag_id = 242134, options = 24)
 
+    print(message_dio.msg.version)
 
     print("Hello world!")
