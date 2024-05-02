@@ -4,6 +4,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import math
 
+from dio import *
+
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
 
@@ -55,7 +57,7 @@ class Node:
                             # Each element is a tuple: (node object, connection object). 
                             # This list has nothing to do with any RPLInstance or DODAG, its simply information about the physical network.
 
-        # RPL values:_
+        # RPL values:
         self.rpl_instaces = [] # list of RPLIncances that the node is a part of (contains all dodags)
         self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
         self.silent_mode = True  # node will stay silent untill (this approach is mentioned as valid in the RPL standard)
@@ -83,6 +85,67 @@ class Node:
 
     # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
          pass
+    
+    def dio_handler(dio_message: DIO_message):
+        # see section 8 in RPL standarden (RFC 6550) 
+        # Ehhh:
+        #  DODAGID: The DODAGID is a Global or Unique Local IPv6 address of the
+        #          root.  A node that joins a DODAG SHOULD provision a host route
+        #          via a DODAG parent to the address used by the root as the
+        #          DODAGID.
+        # AKA DODAG ID ER IPV6 ADDRESSEN?!?!?!?
+
+        # 8.1.  DIO Base Rules
+
+        #    1.  For the following DIO Base fields, a node that is not a DODAG
+        #        root MUST advertise the same values as its preferred DODAG parent
+        #        (defined in Section 8.2.1).  In this way, these values will
+        #        propagate Down the DODAG unchanged and advertised by every node
+        #        that has a route to that DODAG root.  These fields are as
+        #        follows:
+        #        1.  Grounded (G)
+        #        2.  Mode of Operation (MOP)
+        #        3.  DAGPreference (Prf)
+        #        4.  Version
+        #        5.  RPLInstanceID
+        #        6.  DODAGID
+
+        #    2.  A node MAY update the following fields at each hop:
+        #        1.  Rank - DEN HER SKAL UPDATES TROR JEG
+        #        2.  DTSN -  BRUGT TIL DOWN ROUTES (dao stuff)
+
+        #    3.  The DODAGID field each root sets MUST be unique within the RPL
+        #        Instance and MUST be a routable IPv6 address belonging to the
+        #        root.
+
+        #  AKA DODAG ID SKAL VÆRE EN IPv5 ADRESSESE (belonging to the root)
+
+        #     RPL's Upward route discovery algorithms and processing are in terms
+        #    of three logical sets of link-local nodes.  First, the candidate
+        #    neighbor set is a subset of the nodes that can be reached via link-
+        #    local multicast.  The selection of this set is implementation and OF
+        #    dependent.  Second, the parent set is a restricted subset of the
+        #    candidate neighbor set.  Finally, the preferred parent is a member of
+        #    the parent set that is the preferred next hop in Upward routes.
+        #    Conceptually, the preferred parent is a single parent; although, it
+        #    may be a set of multiple parents if those parents are equally
+        #    preferred and have identical Rank.
+        #       AKA 3 SET (lister). NABOER, PARENTS OG PREFERD PARENT (i RPL kan man have flere preferd parents.. men det arbejder vi ikke med)
+        #       VED IKKE HVAD VI SKAL BRUGE PARENT LISTEN TIL... SÅ TÆNKER VI IGNORE DEM
+        #       ELLER HVAD! HVADD ER DET VI PASSER OF0? ER DET PARENTS ELLER HVAD??? FUCK...
+        #       OKAY, SÅ VI SKAL HAVE EN LISTE MED PARRENTS?? MEN BEHØVER VI DET MED VORES OF0 IMPLMENETRING??
+                #  I OF0 STÅR DER  : As it scans all the candidate neighbors, OF0 keeps the parent that is
+                    #the best for the following criteria (in order):
+                #   SÅ SPØRGSMÅLET ER OM INPUTTET TIL OF0 KAN VÆRE DIO BESKEDER FRA ALLE NABOER, ELLER!!! OM DEN FORVENTER MAN KUN INPUTTER DEN PARENTS(aka naboer med advetised rank mindre end nodens egen rank)
+
+
+        # TODO Vores OF0 skal tage metric in mind. og måske også contrains hvis du vælger at tilføje det
+
+
+        # tror faktisk ikke noden behøver have en liste over beskeder fra alle de andres dodag info... tror bare, hver gang den får en DIO besked, skal den sammenligne om den giver en bedre preferd parent end tden tidligere. hvis den gør, så update preferd parent, update rank og brug den nye rank i dens dio beskeder. hvis noden får en dio uden at have andre, skal den bare gøre den til preferd parent
+
+
+        pass
 
     def run(self, env):  # Simpy process
         while(True):
@@ -129,6 +192,8 @@ class Network:
         for node in self.networkx_graph.nodes(data="pos"):
             self.nodes.append(Node(self.env, node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
                                                                                               # note: node_id matches index in self.nodes array!
+            #print(f"xpos: {node[1][0]}, ypos: {node[1][1]}")
+
 
         # Estimate relative ETX values for each connection:
         for connection in self.connections:
