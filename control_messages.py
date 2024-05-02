@@ -1,39 +1,6 @@
 
 import defines
 
-"""
-
-lave en class der hedder ICMP_dio
-    Anvend en class der hedder ICMP header
-    dio_object = icmp_dio()
-    DAG Metric Container hvor input er en string og den laver det selv
-        None
-        Hop count object
-        EXT reliability object
-
-Lave det samme til de to andre (dao og dao ack)
-
-https://datatracker.ietf.org/doc/html/rfc6551#section-3.3
-
-fx for dio message --> ICMP header + DIO + Options (hop/EXT)
-
-"""
-
-# Container
-# lave class til hop count object
-# lave class til EXT reliability object
-
-# Lave dio message class
-# Lave dao message class
-# Lave dao ack message class
-
-# TODO Lave ICMP_dio class
-# TODO Lave ICMP_dao class
-# TODO Lave ICMP_dao_ack class 
-# TODO Packet
-
-# Lave ICMP header class
-
 """ ICMP header implementation """
 
 class ICMP_header:
@@ -94,8 +61,10 @@ class DIO:
     #    |   Option(s)...
     #    +-+-+-+-+-+-+-+-+
 
-    def __init__(self, rpl_instance_id, vers, rank, g_flag, mop,\
-                 prf, dtsn, flags, reserved, dodag_id, opt):
+    # Options field is implemented in the ICMP_DIO
+
+    def __init__(self, rpl_instance_id, vers, rank, g_flag, dodag_id,\
+                 mop = 0, prf = 0, dtsn = 0, flags = 0, reserved = 0):
 
         self.rpl_instance_id = rpl_instance_id      # Set by the DODAG root and indicate which RPL Instance the DODAG is a part of.
         self.vers = vers                            # TODO Unsigned integer set by the DODAG root to the DODAGVersionNumber           
@@ -114,7 +83,7 @@ class DIO:
         self.reserved = reserved                    # TODO MUST be set to 0 by sender and ignored by receiver.
         self.dodag_id = dodag_id                    # IPv6 address set by a DODAG root that uniquely identifies a DODAG. The DODAGID 
                                                     # MUST be a routable IPv6 address belonging to the DODAG root.
-        self.opt = opt                              # The DIO message MAY carry valid options. Refer RFC6550 section 6.3.3 for valid options.
+        
 
         # All fields included, however not all are necessarily used.
         # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.3
@@ -267,17 +236,27 @@ class ETX_OBJ():
 
 class ICMP_DIO:
 
-    def __init__(self):
+    # The options field of the ICMP_DIO is limited to 1 option per packet. 
+    # This is in contrast to the standard.
 
-        self.ICMP = ICMP_header(type = 155, code = defines.CODE_DIO)
-        self.DIO = DIO()
+    def __init__(self, rpl_instance_id, vers, rank, g_flag, dodag_id):
+
+        self.ICMP = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIO)
+        self.DIO = DIO(rpl_instance_id = rpl_instance_id,\
+                       vers = vers,\
+                       rank = rank,\
+                       g_flag = g_flag,\
+                       dodag_id = dodag_id
+                       )
         self.option = None
 
-    def add_ETX_metric():
-        pass
+    def add_HP_metric(self, HP):
+        
+        self.option = HP_OBJ(HP = HP)
 
-    def add_HP_metric():
-        pass
+    def add_ETX_metric(self, ETX):
+        
+        self.option = ETX_OBJ(ETX = ETX)
 
 
 class ICMP_DAO:
@@ -295,5 +274,7 @@ class ICMP_DAO_ACK:
 
 class Packet:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, src_node_id, payload):
+        
+        self.src_node_id = src_node_id
+        self.payload = payload
