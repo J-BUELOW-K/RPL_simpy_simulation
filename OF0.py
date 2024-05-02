@@ -93,10 +93,10 @@ def compare_parent(parent_1, parent_2):
     rank2 = compute_rank_increase(parent_2.dodag, parent_2.dodag.rank)
 
     
-    if (parent_1.dodag.DAGRank(rank1) != parent_2.dodag.DAGRank(rank2)):
+    if (parent_1.dodag.DAGRank(rank1) != parent_2.dodag.DAGRank(rank2)): # step 8 in RFC 6552
         return rank1 - rank2
     
-    # a preferred parent should stay preferred
+    # a preferred parent should stay preferred. Step 10 in RFC 6552
     if parent_1.preferred:
         return -1
 
@@ -105,7 +105,7 @@ def compare_parent(parent_1, parent_2):
     
     # router that has announced a DIO message more recently should be
     # preferred
-    return parent_2.dodag.last_dio - parent_1.dodag.last_dio
+    return parent_2.dodag.last_dio - parent_1.dodag.last_dio # step 11 in RFC 6552
     ...
         
 class node_tester():
