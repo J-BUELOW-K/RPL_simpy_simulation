@@ -3,7 +3,7 @@ import simpy
 import networkx as nx
 import matplotlib.pyplot as plt
 import math
-
+import dodag
 from dio import *
 
 SPEED_OF_LIGHT = 299792458
@@ -80,13 +80,13 @@ class Node:
         # MÅSKE er broadcast_dio difineret i en anden fil (der hvor dio handleren er) - og så gør den fil bare brug af node_objectet.broadcast_message (skal man noden så passe sig selv? hvordan virker det? kan man passe "self" måske)
         #broadcast_message(dio_object)
 
-        # TODO i OF0 "Selection of the Preferred Parent" Step 1, nævner de at en nabo skal overholder alle steps fra 8.2.1 i RPL standarden, før den overhoevedet kan overvejes i OF0.
-        # TODO Dio beskeder kan carry options - overvej om vi skal sende en metric object med dio beskederne (forskellige metric objekter er definineret i RFC 6551) (se sec 6.3.3 og 6.7.4 i RPL stanarden)
+    # TODO i OF0 "Selection of the Preferred Parent" Step 1, nævner de at en nabo skal overholder alle steps fra 8.2.1 i RPL standarden, før den overhoevedet kan overvejes i OF0.
+    # TODO Dio beskeder kan carry options - overvej om vi skal sende en metric object med dio beskederne (forskellige metric objekter er definineret i RFC 6551) (se sec 6.3.3 og 6.7.4 i RPL stanarden)
 
     # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
          pass
     
-    def dio_handler(dio_message: DIO_message):
+    def dio_handler(self, source_node_id, dio_message: DIO_message):
         # see section 8 in RPL standarden (RFC 6550) 
         # Ehhh:
         #  DODAGID: The DODAGID is a Global or Unique Local IPv6 address of the
@@ -94,6 +94,39 @@ class Node:
         #          via a DODAG parent to the address used by the root as the
         #          DODAGID.
         # AKA DODAG ID ER IPV6 ADDRESSEN?!?!?!?
+
+        
+        
+        
+        rpl_instance_idx = next((idx for idx, instance in enumerate(self.rpl_instaces) 
+                                if instance.rpl_instance_id == dio_message.rpl_instance_id), None)
+        
+        if rpl_instance_idx is None: # if the node doesn't have a rpl instance with the same id as the one in the dio message
+            self.rpl_instaces.append(dodag.Rpl_Instance(dio_message.rpl_instance_id)) # create a new rpl instance object and add it to the list of rpl instances in the node
+            rpl_instance_idx = len(self.rpl_instaces) - 1 # get the index of the newly created rpl instance object
+            
+
+        dodag_idx = next((idx for idx, dodag in enumerate(self.rpl_instaces[rpl_instance_idx].dodag_list) 
+                        if dodag.dodag_id == dio_message.dodag_id), None)
+        
+        
+        if dodag_idx is None: # if the node doesn't have a dodag with the same id as the one in the dio message
+            self.rpl_instaces[rpl_instance_idx].dodag_list.append(dodag.Dodag(dio_message.dodag_id, dio_message.version, is_root = False)) # create a new dodag object and add it to the list of dodags in the rpl instance
+            dodag_idx = len(self.rpl_instaces[rpl_instance_idx].dodag_list) - 1 # get the index of the newly created dodag object
+            
+
+        preferred_parent = self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].preferred_parent
+        rank = self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].rank
+        
+        if not preferred_parent or self.OF0(dio_message, preferred_parent): # if the new DIO message provides a better parent than the current preferred parent (or the node doesn't have a preferred parent) then update the node's preferred parent
+            self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].preferred_parent = source_node_id #TODO new parent object
+            
+            self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].rank = compute_rank(dio_message.dodag_id, rank) # Step 8 in RFC 6552  # self.rank skal være den fra den korrekte dodagi RPLinstance arrayed
+            
+            # TODO update acculimated ETX, hvis vi vælger en ny parent.. ved ikke lige hvordan det hænger sammen..
+
+            # broadcast dio message to all neighbors
+            self.broadcast_dio(dio_message)
 
         # 8.1.  DIO Base Rules
 
@@ -140,10 +173,24 @@ class Node:
 
 
         # TODO Vores OF0 skal tage metric in mind. og måske også contrains hvis du vælger at tilføje det
+                # (cumulative path ETX calculated as the sum of the link ETX
+                #    of all of the traversed links from the advertising node to the DAG
+                #    root), if it selects that node as its preferred parent, the node
+                #    updates the path ETX by adding the ETX of the local link between
+                #    itself and the preferred parent to the received path cost (path ETX)
+                #    before potentially advertising itself the new path ETX.
+                # AKA UPDATE DET KUMMULATIVE ETX I ETX METRIC OBJEKTET, HVIS VI VÆLGER EN NY PARENT
+                # TROR OGSÅ KUN VI SKAL UPDATE RANK, HVIS VI FÅR EN NY PREFFERED PARRENT.
+
+
+
+        # MEGET VIGTIGT - SE 4.3.2. The ETX Reliability Object I METRIC STANDARDEN
+
+
 
 
         # tror faktisk ikke noden behøver have en liste over beskeder fra alle de andres dodag info... tror bare, hver gang den får en DIO besked, skal den sammenligne om den giver en bedre preferd parent end tden tidligere. hvis den gør, så update preferd parent, update rank og brug den nye rank i dens dio beskeder. hvis noden får en dio uden at have andre, skal den bare gøre den til preferd parent
-
+        
 
         pass
 
@@ -186,7 +233,8 @@ class Network:
         # Generate geometric network (nodes are places at random, edges are drawn if within radius):
         while(True):
             self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI LADER DEN BARE STÅ
-            if nx.is_connected(self.networkx_graph): break #if graph is not connected, try again...
+            if nx.is_connected(self.networkx_graph): 
+                break #if graph is not connected, try again...
 
         # tranlate networkx nodes/edges to our own nodes/connections setup (to make them easier to work with):
         self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
