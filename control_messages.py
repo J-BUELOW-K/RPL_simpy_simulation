@@ -259,14 +259,16 @@ class ICMP_DIO:
                        dodag_id = dodag_id
                        )
         self.option = None
+        self.option_type = None
 
     def add_HP_metric(self, HP):
-        
-        self.option = HP_OBJ(HP = HP)
+        self.option = HP_OBJ(HP = HP) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
+        self.option_type = "HP"
 
     def add_ETX_metric(self, ETX):
-        
-        self.option = ETX_OBJ(ETX = ETX)
+        self.option = ETX_OBJ(ETX = ETX) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
+        self.option_type = "ETX"
+
 
 
 class ICMP_DAO:

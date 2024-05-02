@@ -22,8 +22,7 @@ MAXIMUM_RANK_FACTOR  = 4
 MAX_ETX = network.estimate_etx(defines.RADIUS,'fspl')
 DEFAULT_MIN_HOP_RANK_INCREASE = 256
 
-# constant maximum for the Rank
-INFINITE_RANK = 0xffff
+
 
 class OF0:
     def __init__(self, default:bool=True, config_dict:dict=None) -> None:
@@ -40,7 +39,7 @@ class OF0:
         pass
     
     
-def compute_rank(dodag, etx, parent_rank:int=0, OF0:str='ETX'):
+def of0_compute_rank(dodag, parent_rank:int=0, metric_object = None, metric_object_type = None):
     # The step_of_rank Sp that is computed for that link is multiplied by
     # the rank_factor Rf and then possibly stretched by a term Sr that is
     # less than or equal to the configured stretch_of_rank.  The resulting
@@ -53,8 +52,10 @@ def compute_rank(dodag, etx, parent_rank:int=0, OF0:str='ETX'):
         
         #define STEP_OF_RANK(p)       (((3 * parent_link_metric(p)) / LINK_STATS_ETX_DIVISOR) - 2)
         
-    if OF0 == 'ETX':
-        step_of_rank = (((3 * etx) / LINK_STATS_ETX_DIVISOR) - 2)
+    # if OF0 == 'ETX':
+    #     step_of_rank = (((3 * etx) / LINK_STATS_ETX_DIVISOR) - 2)
+
+    # UDREGNE STEP OF RANK. ENTEN VED BRUG AF DEFAULT step_of_rank (hvis der ingen metric object gives), eller "HP" eller "ETX"
     
     rank_increase = (DEFAULT_RANK_FACTOR * DEFAULT_STEP_OF_RANK + DEFAULT_RANK_STRETCH) * dodag.MinHopRankIncrease
     if parent_rank+rank_increase > INFINITE_RANK:
@@ -66,20 +67,14 @@ def compute_rank(dodag, etx, parent_rank:int=0, OF0:str='ETX'):
         
         ...
         
-def compute_preferred_parent(dodag, neighbors:list):
-    
-    # The parent that is selected as the preferred parent is the one that has the lowest rank among all the neighbors that have been heard within the last DIOInterval.
-    for neighbor in neighbors:
-        out = []
-        for i in range(1, len(neighbors)):
-            out.append(compare_parent(neighbor, neighbors[i]))
+
             
     
     
     
     ...
     
-def compare_parent(parent_1: Node, parent_2: Node):
+def of0_compare_parent(parent_1: Node, parent_2: Node, ICMP_DIO, metric_object = None, metric_object_type = None):
     """Compare the rank of two parents and return the preferred parent.
 
     Args:
@@ -112,8 +107,8 @@ def compare_parent(parent_1: Node, parent_2: Node):
     #     return 1  # parent 2
     # if (not parent_2.dodag.G and parent_1.dodag.G):
     #     return -1 # parent 1
-    rank1 = compute_rank(parent_1.dodag, parent_1.dodag.rank)
-    rank2 = compute_rank(parent_2.dodag, parent_2.dodag.rank)
+    rank1 = of0_compute_rank(parent_1.dodag, parent_1.dodag.rank)
+    rank2 = of0_compute_rank(parent_2.dodag, parent_2.dodag.rank)
 
     
     if (parent_1.dodag.DAGRank(rank1) != parent_2.dodag.DAGRank(rank2)): # step 8 in RFC 6552
@@ -131,29 +126,41 @@ def compare_parent(parent_1: Node, parent_2: Node):
     return parent_2.dodag.last_dio - parent_1.dodag.last_dio # step 11 in RFC 6552
     ...
         
-class node_tester():
+
+
+
+
+# def of0_compute_preferred_parent(dodag, neighbors:list):
     
-    def __init__(self, dodag) -> None:
-        self.dodag = dodag
-        self.preferred = False
-        self.rank = 0
-        self.G = False
-        self.Prf = 0
-        self.last_dio = 0
+#     # The parent that is selected as the preferred parent is the one that has the lowest rank among all the neighbors that have been heard within the last DIOInterval.
+#     for neighbor in neighbors:
+#         out = []
+#         for i in range(1, len(neighbors)):
+#             out.append(of0_compare_parent(neighbor, neighbors[i]))
+
+# class node_tester():
     
-if __name__ == "__main__":
+#     def __init__(self, dodag) -> None:
+#         self.dodag = dodag
+#         self.preferred = False
+#         self.rank = 0
+#         self.G = False
+#         self.Prf = 0
+#         self.last_dio = 0
+    
+# if __name__ == "__main__":
     
     
-    d1 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
-    n1 = node_tester(d1)
-    d2 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
-    n2 = node_tester(d2)
-    d3 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
-    n3 = node_tester(d3)
+#     d1 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
+#     n1 = node_tester(d1)
+#     d2 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
+#     n2 = node_tester(d2)
+#     d3 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
+#     n3 = node_tester(d3)
     
     
-    n1_neighbors = [n2, n3]
+#     n1_neighbors = [n2, n3]
 
     
-    compute_preferred_parent(n1, n1_neighbors)
+#     of0_compute_preferred_parent(n1, n1_neighbors)
     

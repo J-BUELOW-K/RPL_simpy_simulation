@@ -3,8 +3,9 @@ import simpy
 import networkx as nx
 import matplotlib.pyplot as plt
 import math
-import dodag
-from dio import *
+from dodag import Rpl_Instance, Dodag
+from control_messages import *
+from OF0 import of0_compute_rank, of0_compare_parent
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
@@ -58,9 +59,9 @@ class Node:
                             # This list has nothing to do with any RPLInstance or DODAG, its simply information about the physical network.
 
         # RPL values:
-        self.rpl_instaces = [] # list of RPLIncances that the node is a part of (contains all dodags)
+        self.rpl_instances = [] # list of RPLIncances that the node is a part of (contains all dodags)
         self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
-        self.silent_mode = True  # node will stay silent untill (this approach is mentioned as valid in the RPL standard)
+        self.silent_mode = True  # node will stay silent untill (see section 18.2.1.1 in RPL standard)
 
     def add_to_neighbors_list(self, neighbor_object, connection_object): # add a single neighbor to the self.neighbors list
         self.neighbors.append((neighbor_object, connection_object))
@@ -86,7 +87,7 @@ class Node:
     # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
          pass
     
-    def dio_handler(self, source_node_id, dio_message: DIO_message):
+    def dio_handler(self, source_node_id, dio_message: ICMP_DIO, metric_object = None, metric_object_type = None):
         # see section 8 in RPL standarden (RFC 6550) 
         # Ehhh:
         #  DODAGID: The DODAGID is a Global or Unique Local IPv6 address of the
@@ -96,37 +97,98 @@ class Node:
         # AKA DODAG ID ER IPV6 ADDRESSEN?!?!?!?
 
         
+
+
+
+
+        ####################  Find RPL Instance and Dodag in the nodes self.rpl_instaces list - If no entries, we create them ####################
+
+        rpl_instance_idx = None
+        dodag_list_idx = None
+
+        # Find associated RPL Instance:
+        for i in range(len(self.rpl_instances)):
+            if self.rpl_instances[i].rpl_instance_id == dio_message.rpl_instance_id:
+                print("debug: matching RPL Instance entry found!")
+                rpl_instance_idx = i
+
+        if rpl_instance_idx != None: # If there exists an entry for the recieved RPL instance in self.rpl_instaces!
+            # Find associated Dodag:
+            for i in range(len(self.rpl_instances[rpl_instance_idx].dodag_list)):
+                temp_dodag = self.rpl_instances[rpl_instance_idx].dodag_list[i]
+                if temp_dodag.dodag_id and temp_dodag.dodag_version_num: # Both ID and Version has to match!
+                    print("debug: matching dodag entry found!")
+                    dodag_list_idx = i
+            if dodag_list_idx == None:
+                # Create Dodag entry in the RPL Instance
+                # husk at set dodag_list_idx
+                dodag_object = Dodag(dio_message.dodag_id, dio_message.version)
+                self.rpl_instances[rpl_instance_idx].add_dodag(dodag_object)
+                dodag_list_idx = len(self.rpl_instances[rpl_instance_idx].dodag_list) - 1 # value is always just 0
+                pass 
+            
+        else: # No entry in self.rpl_instaces for recieved RPL instance! Create one!
+            dodag_object = Dodag(dio_message.dodag_id, dio_message.version)
+            rpl_instance_obj = Rpl_Instance(dio_message.rpl_instance_id)
+            rpl_instance_obj.add_dodag(dodag_object)
+            self.rpl_instances.append(rpl_instance_obj)
+            rpl_instance_idx = len(self.rpl_instances) - 1 # there might already be entries for other instances in the self.rpl_instaces list
+            dodag_list_idx = len(rpl_instance_obj.dodag_list) - 1  # value is always just 0
+
+        intance_reference = self.rpl_instances[rpl_instance_idx]
+        dodag_reference = self.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx]
+
+        ####################  Check of there are any routing metric objects in the dio message ####################
+
+        if dodag_reference.prefered_parent == None: # Our node does not have a prefered parent - we simply accept the DIO sender as prefered parent
+            dodag_reference.prefered_parent = source_node_id
+            dodag_reference.prefered_parent_rank = dio_message.rank
+            dodag_reference.rank = of0_compute_rank(dodag_reference, dodag_reference.prefered_parent_rank, metric_object, metric_object_type)  # we still have to recompute the rank
+        else:
+            # test if sender is a better prefered parrent than current prefered parrent:
+            if of0_compare_parent(asdasd) == 1: # if sender is better parent
+                
+
+        
+
+
+
+
+
+
+
+
         
         
-        rpl_instance_idx = next((idx for idx, instance in enumerate(self.rpl_instaces) 
-                                if instance.rpl_instance_id == dio_message.rpl_instance_id), None)
+        # rpl_instance_idx = next((idx for idx, instance in enumerate(self.rpl_instaces) 
+        #                         if instance.rpl_instance_id == dio_message.rpl_instance_id), None)
         
-        if rpl_instance_idx is None: # if the node doesn't have a rpl instance with the same id as the one in the dio message
-            self.rpl_instaces.append(dodag.Rpl_Instance(dio_message.rpl_instance_id)) # create a new rpl instance object and add it to the list of rpl instances in the node
-            rpl_instance_idx = len(self.rpl_instaces) - 1 # get the index of the newly created rpl instance object
+        # if rpl_instance_idx is None: # if the node doesn't have a rpl instance with the same id as the one in the dio message
+        #     self.rpl_instaces.append(dodag.Rpl_Instance(dio_message.rpl_instance_id)) # create a new rpl instance object and add it to the list of rpl instances in the node
+        #     rpl_instance_idx = len(self.rpl_instaces) - 1 # get the index of the newly created rpl instance object
             
 
-        dodag_idx = next((idx for idx, dodag in enumerate(self.rpl_instaces[rpl_instance_idx].dodag_list) 
-                        if dodag.dodag_id == dio_message.dodag_id), None)
+        # dodag_idx = next((idx for idx, dodag in enumerate(self.rpl_instaces[rpl_instance_idx].dodag_list) 
+        #                 if dodag.dodag_id == dio_message.dodag_id), None)
         
         
-        if dodag_idx is None: # if the node doesn't have a dodag with the same id as the one in the dio message
-            self.rpl_instaces[rpl_instance_idx].dodag_list.append(dodag.Dodag(dio_message.dodag_id, dio_message.version, is_root = False)) # create a new dodag object and add it to the list of dodags in the rpl instance
-            dodag_idx = len(self.rpl_instaces[rpl_instance_idx].dodag_list) - 1 # get the index of the newly created dodag object
+        # if dodag_idx is None: # if the node doesn't have a dodag with the same id as the one in the dio message
+        #     self.rpl_instaces[rpl_instance_idx].dodag_list.append(dodag.Dodag(dio_message.dodag_id, dio_message.version, is_root = False)) # create a new dodag object and add it to the list of dodags in the rpl instance
+        #     dodag_idx = len(self.rpl_instaces[rpl_instance_idx].dodag_list) - 1 # get the index of the newly created dodag object
             
 
-        preferred_parent = self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].preferred_parent
-        rank = self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].rank
+        # preferred_parent = self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].preferred_parent
+        # rank = self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].rank
         
-        if not preferred_parent or self.OF0(dio_message, preferred_parent): # if the new DIO message provides a better parent than the current preferred parent (or the node doesn't have a preferred parent) then update the node's preferred parent
-            self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].preferred_parent = source_node_id #TODO new parent object
+        # if not preferred_parent or self.OF0(dio_message, preferred_parent): # if the new DIO message provides a better parent than the current preferred parent (or the node doesn't have a preferred parent) then update the node's preferred parent
+        #     self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].preferred_parent = source_node_id #TODO new parent object
             
-            self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].rank = compute_rank(dio_message.dodag_id, rank) # Step 8 in RFC 6552  # self.rank skal være den fra den korrekte dodagi RPLinstance arrayed
+        #     self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].rank = compute_rank(dio_message.dodag_id, rank) # Step 8 in RFC 6552  # self.rank skal være den fra den korrekte dodagi RPLinstance arrayed
             
-            # TODO update acculimated ETX, hvis vi vælger en ny parent.. ved ikke lige hvordan det hænger sammen..
+        #     # TODO update acculimated ETX, hvis vi vælger en ny parent.. ved ikke lige hvordan det hænger sammen..
 
-            # broadcast dio message to all neighbors
-            self.broadcast_dio(dio_message)
+        #     # broadcast dio message to all neighbors
+        #     self.broadcast_dio(dio_message)
 
         # 8.1.  DIO Base Rules
 
