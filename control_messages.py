@@ -1,109 +1,75 @@
 
 import defines
 
+"""
 
-# Based on RFC6550 - https://datatracker.ietf.org/doc/html/rfc6550#section-6.4
+lave en class der hedder ICMP_dio
+    Anvend en class der hedder ICMP header
+    dio_object = icmp_dio()
+    DAG Metric Container hvor input er en string og den laver det selv
+        None
+        Hop count object
+        EXT reliability object
 
-class DAO_message:
+Lave det samme til de to andre (dao og dao ack)
 
-    """DODAG Information Object (DIO)"""
+https://datatracker.ietf.org/doc/html/rfc6551#section-3.3
 
-    #         0                   1                   2                   3
-    #         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-    #        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #        | RPLInstanceID |K|D|   Flags   |   Reserved    | DAOSequence   |
-    #        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #        |                                                               |
-    #        +                                                               +
-    #        |                                                               |
-    #        +                            DODAGID*                           +
-    #        |                                                               |
-    #        +                                                               +
-    #        |                                                               |
-    #        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #        |   Option(s)...
-    #        +-+-+-+-+-+-+-+-+
+fx for dio message --> ICMP header + DIO + Options (hop/EXT)
+
+"""
+
+# Container
+# lave class til hop count object
+# TODO lave class til EXT reliability object
+
+# Lave dio message class
+# Lave dao message class
+# Lave dao ack message class
+
+# TODO Lave ICMP_dio class
+# TODO Lave ICMP_dao class
+# TODO Lave ICMP_dao_ack class 
+# TODO Packet
+
+# Lave ICMP header class
 
 
-    def __init__(self, rpl_instance_id = 0, k = False, d = False, flags = 0,\
-                 reserved = 0, dao_sequence = 0, dodag_id = None, options = None):
+
+class ICMP_header:
+
+    """ICMP "header" only"""
+
+    def __init__(self, type, code):
         
-        self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
-        self.k = k                                  # The 'K' flag indicates that the recipient is expected to send a DAO-ACK back.
-        self.d = d                                  # The 'D' flag indicates that the DODAGID field is present. This
-                                                    # flag MUST be set when a local RPLInstanceID is used.
-        self.flags = flags                          # We can ignore this one for now. MUST be set to 0 by sender and ignored by receiver.
-        self.reserved = reserved                    # MUST be set to 0 by the sender and ignored by the receiver.
-        self.dao_sequence = dao_sequence            # Incremented at each unique DAO message from a node and echoed in the DAO-ACK message.
-        self.dodag_id = dodag_id                    # Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
-                                                    # present when the 'D' flag is set.
-        self.options = options                      # The DIO message MAY carry valid options. Refer RFC6550 section 6.4.3 for valid options.
-        
-        self.__self_check()
-
-    def __self_check(self):
-
-        if self.d:
-            if self.dodag_id is None:
-                raise ValueError("D is set but no DODAGID given.")
-            if self.dodag_id < 0:
-                raise ValueError("DODAGID MUST be an unsigned interger.")
-        else:
-            if self.dodag_id is not None:
-                raise ValueError("D flag not set. MUST be set when DODAGID field is used.")
-
-
-
-class DAO_ACK_message:
-
-    """Destination Advertisement Object Acknowledgement"""
-
     #     0                   1                   2                   3
     #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #    | RPLInstanceID |D|  Reserved   |  DAOSequence  |    Status     |
+    #    |     Type      |     Code      |          Checksum             |
     #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     #    |                                                               |
-    #    +                                                               +
-    #    |                                                               |
-    #    +                            DODAGID*                           +
-    #    |                                                               |
-    #    +                                                               +
-    #    |                                                               |
+    #    .                             Base                              .
+    #    .                                                               .
     #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #    |   Option(s)...
-    #    +-+-+-+-+-+-+-+-+
+    #    |                                                               |
+    #    .                           Option(s)                           .
+    #    .                                                               .
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-    def __init__(self, rpl_instance_id = 0, d = False, reserved = 0,\
-                 dao_sequence = 0, status = None, dodag_id = None, options = None):
-        
-        self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
-        self.d = d                                  # The 'D' flag indicates that the DODAGID field is present. This
-                                                    # flag MUST be set when a local RPLInstanceID is used.
-        self.reserved = reserved                    # Reserved for flags. We can ignore this one for now.
-        self.dao_sequence = dao_sequence            # Incremented at each DAO message from a node, and echoed in the DAO-ACK 
-                                                    # by the recipient. The DAOSequence is used to correlate a DAO message and a DAO ACK message
-        self.status = status                        # Status 0: Unqualified acceptance (i.e., the node receiving the DAO-ACK is not rejected).
-        self.dodag_id = dodag_id                    # Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
-                                                    # present when the 'D' flag is set.
-        self.options = options                      # The DIO message MAY carry valid options. Refer RFC6550 section 6.5.3 for valid options.
+    # Source: rfc6550
 
-        self.__self_check()
+        self.type = type
+        self.code = code
 
-    def __self_check(self):
+        # Checksum and options not included. Base field is implemented at a higher level.
+        # Refer https://datatracker.ietf.org/doc/html/rfc6550#section-6
 
-        if self.d:
-            if self.dodag_id is None:
-                raise ValueError("D is set but no DODAGID given.")
-            if self.dodag_id < 0:
-                raise ValueError("DODAGID MUST be an unsigned interger.")
-        else:
-            if self.dodag_id is not None:
-                raise ValueError("D flag not set. MUST be set when DODAGID field is used.")
+        # TODO Check for ICMP type = 155 in message handler
+        # TODO Check ICMP code. If unknown, the discard. 
 
 
 
-class DIO_message:
+class DIO:
 
     """DODAG Information Object (DIO)""" 
 
@@ -125,88 +91,147 @@ class DIO_message:
     #    |   Option(s)...
     #    +-+-+-+-+-+-+-+-+
 
-    def __init__(self, rpl_instance_id = 0, version = 0, rank = 0, g = False, mop = 0,\
-                 prf = None, dtsn = None, flags = 0, reserved = 0, dodag_id = 0, options = None):
+    def __init__(self, rpl_instance_id, vers, rank, g_flag, mop,\
+                 prf, dtsn, flags, reserved, dodag_id, opt):
 
         self.rpl_instance_id = rpl_instance_id      # Set by the DODAG root and indicate which RPL Instance the DODAG is a part of.
-        self.version = version                      # Unsigned integer set by the DODAG root to the DODAGVersionNumber           
-        self.rank = rank                            # Unsigned integer indicating the DODAG Rank of the node sending the DIO message
-        self.g = g                                  # The Grounded 'G' flag indicates whether the DODAG advertised can satisfy the 
+        self.vers = vers                            # TODO Unsigned integer set by the DODAG root to the DODAGVersionNumber           
+        self.rank = rank                            # TODO Unsigned integer indicating the DODAG Rank of the node sending the DIO message
+        self.g_flag = g_flag                        # The Grounded 'G' flag indicates whether the DODAG advertised can satisfy the 
                                                     # application-defined goal. If the flag is set, the DODAG is grounded. If the 
                                                     # flag is cleared, the DODAG is floating.
         self.mop = mop                              # The Mode of Operation (MOP) field identifies the mode of operation of the RPL 
                                                     # Instance as administratively provisioned at and distributed by the DODAG root.  
                                                     # All nodes who join the DODAG must be able to honor the MOP in order to fully 
                                                     # participate as a router, or else they must only join as a leaf.
-        self.prf = prf                              # DODAGPreference (Prf): A 3-bit unsigned integer that defines how preferable the
+        self.prf = prf                              # TODO DODAGPreference (Prf): A 3-bit unsigned integer that defines how preferable the
                                                     # root of this DODAG is compared to other DODAG roots within the instance
-        self.dtsn = dtsn                            # Unsigned integer set by the node issuing the DIO message
-        self.flags = flags                          # MUST be set to 0 by sender and ignored by receiver. 
-        self.reserved = reserved                    # MUST be set to 0 by sender and ignored by receiver.
+        self.dtsn = dtsn                            # TODO Unsigned integer set by the node issuing the DIO message
+        self.flags = flags                          # TODO MUST be set to 0 by sender and ignored by receiver. 
+        self.reserved = reserved                    # TODO MUST be set to 0 by sender and ignored by receiver.
         self.dodag_id = dodag_id                    # IPv6 address set by a DODAG root that uniquely identifies a DODAG. The DODAGID 
                                                     # MUST be a routable IPv6 address belonging to the DODAG root.
-        self.options = options                      # The DIO message MAY carry valid options. Refer RFC6550 section 6.3.3 for valid options.
+        self.opt = opt                              # The DIO message MAY carry valid options. Refer RFC6550 section 6.3.3 for valid options.
 
-        self.__self_check()
+        # All fields included, however not all are necessarily used.
+        # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.3
 
-    def __self_check(self):
+
+
+class DAO:
+
+    """DODAG Information Object (DAO)"""
+
+    #         0                   1                   2                   3
+    #         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    #        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #        | RPLInstanceID |K|D|   Flags   |   Reserved    | DAOSequence   |
+    #        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #        |                                                               |
+    #        +                                                               +
+    #        |                                                               |
+    #        +                            DODAGID*                           +
+    #        |                                                               |
+    #        +                                                               +
+    #        |                                                               |
+    #        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #        |   Option(s)...
+    #        +-+-+-+-+-+-+-+-+
+
+
+    def __init__(self, rpl_instance_id, k_flag, d_flag, dao_sequence,\
+                 dodag_id, opt, flags = 0, reserved = 0):
         
-        if self.version < 0:
-            raise ValueError("Version number MUST be an unsigned interger.")
-        if self.rank < 0:
-            raise ValueError("Rank MUST be an unsigned interger.")
-        if self.prf is not None and self.prf < 0:
-            raise ValueError("prf MUST be an unsigned interger.")
-        if self.dtsn is not None and self.dtsn < 0:
-            raise ValueError("DTSN MUST be an unsigned interger.")        
+        self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
+        self.k_flag = k_flag                        # The 'K' flag indicates that the recipient is expected to send a DAO-ACK back.
+        self.d_flag = d_flag                        # The 'D' flag indicates that the DODAGID field is present. This
+                                                    # flag MUST be set when a local RPLInstanceID is used.
+        self.flags = flags                          # TODO MUST be set to 0 by sender and ignored by receiver.
+        self.reserved = reserved                    # TODO MUST be set to 0 by the sender and ignored by the receiver.
+        self.dao_sequence = dao_sequence            # Incremented at each unique DAO message from a node and echoed in the DAO-ACK message.
+        self.dodag_id = dodag_id                    # TODO Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
+                                                    # present when the 'D' flag is set.
+        self.opt = opt                              # The DIO message MAY carry valid options.
+                                                    # This project supports Hop Count Objects, EXT reliability object, or none.
+    
+    # All fields included, however not all are necessarily used.
+    # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.4
+
+ 
+
+class DAO_ACK:
+
+    """Destination Advertisement Object Acknowledgement"""
+
+    #     0                   1                   2                   3
+    #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    | RPLInstanceID |D|  Reserved   |  DAOSequence  |    Status     |
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |                                                               |
+    #    +                                                               +
+    #    |                                                               |
+    #    +                            DODAGID*                           +
+    #    |                                                               |
+    #    +                                                               +
+    #    |                                                               |
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |   Option(s)...
+    #    +-+-+-+-+-+-+-+-+
 
 
-class message:
-
-    def __init__(self, code):
+    def __init__(self, rpl_instance_id, d_flag, reserved,\
+                 dao_sequence, status, dodag_id, opt):
         
-        self.code = code
-        self.dio = None
-        self.dao = None
-        self.dao_ack = None
+        self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
+        self.d_flag = d_flag                        # The 'D' flag indicates that the DODAGID field is present. This
+                                                    # flag MUST be set when a local RPLInstanceID is used.
+        self.reserved = reserved                    # Reserved for flags. 
+        self.dao_sequence = dao_sequence            # Incremented at each DAO message from a node, and echoed in the DAO-ACK 
+                                                    # by the recipient. The DAOSequence is used to correlate a DAO message and a DAO ACK message
+        self.status = status                        # TODO Status 0: Unqualified acceptance (i.e., the node receiving the DAO-ACK is not rejected).
+        self.dodag_id = dodag_id                    # TODO Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
+                                                    # present when the 'D' flag is set.
+        self.opt = opt                              # The DIO message MAY carry valid options.
 
-    def dis(self):
-        pass
+    # All fields included, however not all are necessarily used.
+    # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.5
 
-    def define_dio(self, rpl_instance_id = 0, version = 0, rank = 0, g = False, mop = 0,\
-                 prf = None, dtsn = None, flags = 0, reserved = 0, dodag_id = 0, options = None):
+
+
+
+    # Routing Metrics applied in this project has been reduced a lot and will not
+    # use the standart DAG Metric Container Format. Only the Hop Count (HP) and ETX Reliability
+    # Object are implemented. 
+
+class HP_OBJ():
+    
+    # The Hop Count (HP) object is used to report the number of traversed
+    # nodes along the path.
+
+    #   0                   1             
+    #   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 
+    #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #   |  Res  | Flags |   Hop Count   |
+    #   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    # The HP object may also contain a set of TLVs used to convey various
+    # node characteristics. No TLV is currently defined and has thus been opmitted.
+    # Hop count may be used as a metric or as a constraint. Is only used as a metric
+    # TODOThe first node on the path (not including the sender) must set this value to 1
+    
+    def __init__(self, HP, res = 0, flags = 0):
         
-        if not (self.code == defines.CODE_DIO):
-            raise ValueError("Incorrect message code. MUST be a DIO message")
+        self.res = res                              # Reserved field.  This field MUST be set to zero on 
+                                                    # transmission and MUST be ignored on receipt.
+        self.flags = flags                          # No Flag is currently defined.  Unassigned bits are considered reserved.
+                                                    # They MUST be set to zero on transmission and MUST be ignored on receipt.
+        self.HP = HP                                # Hop Count - Used as a metric
 
-        self.dio = DIO_message(rpl_instance_id, version, rank, g, mop,\
-                               prf, dtsn, flags, reserved, dodag_id, options)
+    # Referce: https://datatracker.ietf.org/doc/html/rfc6551#section-3.3
 
-    def define_dao(self,rpl_instance_id = 0, k = False, d = False, flags = 0,\
-                 reserved = 0, dao_sequence = 0, dodag_id = None, options = None):
 
-        if not (self.code == defines.CODE_DAO):
-            raise ValueError("Incorrect message code. MUST be a DAO message")
+class ETX_OBJ():
+    pass
 
-        self.dao = DAO_message(rpl_instance_id, k, d, flags,\
-                               reserved, dao_sequence, dodag_id, options)
-
-    def define_dao_ack(self, rpl_instance_id = 0, d = False, reserved = 0,\
-                 dao_sequence = 0, status = None, dodag_id = None, options = None):
-
-        if not (self.code == defines.CODE_DAO_ACK):
-            raise ValueError("Incorrect message code. MUST be a DAO ACK message")
-
-        self.dao_ack = DAO_ACK_message(rpl_instance_id, d, reserved,\
-                                   dao_sequence, status, dodag_id, options)
-        
-
-if __name__ == "__main__":
-    message_dio = message(defines.CODE_DIO)
-
-    message_dio.dio(rpl_instance_id = 1, version = 2, rank = 3, g = True, mop = 34,\
-            prf = 1, dtsn = 1, flags = 2, reserved = 31, dodag_id = 242134, options = 24)
-
-    print(message_dio.msg.version)
-
-    print("Hello world!")
+    # Referce: https://datatracker.ietf.org/doc/html/rfc6551#section-4.3.2
