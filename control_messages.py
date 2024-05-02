@@ -265,9 +265,35 @@ class ETX_OBJ():
 
 """ ICMP implementations """
 
+class ICMP_DIO:
+
+    def __init__(self):
+
+        self.ICMP = ICMP_header(type = 155, code = defines.CODE_DIO)
+        self.DIO = DIO()
+        self.option = None
+
+    def add_ETX_metric():
+        pass
+
+    def add_HP_metric():
+        pass
 
 
+class ICMP_DAO:
 
+    def __init__(self) -> None:
+        pass
+
+
+class ICMP_DAO_ACK:
+
+    def __init__(self) -> None:
+        pass
 
 """ Packet implementation """
 
+class Packet:
+
+    def __init__(self) -> None:
+        pass
