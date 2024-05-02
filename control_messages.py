@@ -84,13 +84,16 @@ class DIO:
         self.dodag_id = dodag_id                    # IPv6 address set by a DODAG root that uniquely identifies a DODAG. The DODAGID 
                                                     # MUST be a routable IPv6 address belonging to the DODAG root.
         
+        self.__self_check()
+
     def __self_check(self):
         
         if self.vers < 0:
             raise ValueError("Version MUST be an unsigned int")
         if self.rank < 0:
             raise ValueError("Rank MUST be an unsigned int")
-
+        if not (type(self.g_flag) == bool):
+            raise TypeError("Must be a bool and not a ", type(self.g_flag))
 
         # All fields included, however not all are necessarily used.
         # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.3
@@ -285,3 +288,17 @@ class Packet:
         
         self.src_node_id = src_node_id
         self.payload = payload
+
+
+if __name__=="__main__":
+
+    MyVariable = ICMP_DIO(rpl_instance_id = 10,
+                          vers = 35,
+                          rank = 1,
+                          g_flag = True,
+                          dodag_id = 2
+                          )    
+
+    print(MyVariable.DIO.vers)
+
+    print("Hallo world!")
