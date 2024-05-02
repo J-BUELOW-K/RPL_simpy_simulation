@@ -77,6 +77,7 @@ class Node:
 
     # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
     #     pass
+        ...
 
     def run(self, env):  # Simpy process
         while(True):
@@ -89,8 +90,10 @@ class Node:
                 event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                     # broadcast_dio() # TODO
+                    pass
                 else: # event was a "message in input_msg_queue" event
                     # msg_handler(message)  # TODO
+                    pass
 
 class Connection:
     def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
