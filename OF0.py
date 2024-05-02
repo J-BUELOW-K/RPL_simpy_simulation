@@ -2,6 +2,8 @@ from dodag import Dodag
 import network
 import defines
 
+from network import Node
+
 
 
 # Objective Code Point
@@ -38,7 +40,7 @@ class OF0:
         pass
     
     
-def compute_rank_increase(dodag, parent_rank:int=0, OF0:str='ETX'):
+def compute_rank(dodag, etx, parent_rank:int=0, OF0:str='ETX'):
     # The step_of_rank Sp that is computed for that link is multiplied by
     # the rank_factor Rf and then possibly stretched by a term Sr that is
     # less than or equal to the configured stretch_of_rank.  The resulting
@@ -52,7 +54,7 @@ def compute_rank_increase(dodag, parent_rank:int=0, OF0:str='ETX'):
         #define STEP_OF_RANK(p)       (((3 * parent_link_metric(p)) / LINK_STATS_ETX_DIVISOR) - 2)
         
     if OF0 == 'ETX':
-        step_of_rank = (((3 * dodag.) / LINK_STATS_ETX_DIVISOR) - 2)
+        step_of_rank = (((3 * etx) / LINK_STATS_ETX_DIVISOR) - 2)
     
     rank_increase = (DEFAULT_RANK_FACTOR * DEFAULT_STEP_OF_RANK + DEFAULT_RANK_STRETCH) * dodag.MinHopRankIncrease
     if parent_rank+rank_increase > INFINITE_RANK:
@@ -77,8 +79,24 @@ def compute_preferred_parent(dodag, neighbors:list):
     
     ...
     
-def compare_parent(parent_1:object, parent_2:object):
+def compare_parent(parent_1: Node, parent_2: Node):
+    """Compare the rank of two parents and return the preferred parent.
+
+    Args:
+        parent_1 (Node object): The current parent. 
+        parent_2 (Node object): The note we consider as a potential new parent.
+
+    Raises:
+        NotImplementedError: _description_
+
+    Returns:
+        int: 1 if parent_2 is preferred, -1 if parent_1 is preferred, 0 if they are equal.
+    """
+    
     # The parent that is selected as the preferred parent is the one that has the lowest rank among all the neighbors that have been heard within the last DIOInterval.
+    #parent_1  er den nuværende parent, parent_2 er en potentiel ny parent
+    
+    # The comparison of two parents is done as follows:
     
     # comparison only make sense within the same RPL instance
     if parent_1.dodag.dodag_id != parent_2.dodag.dodag_id:
@@ -94,9 +112,8 @@ def compare_parent(parent_1:object, parent_2:object):
     #     return 1  # parent 2
     # if (not parent_2.dodag.G and parent_1.dodag.G):
     #     return -1 # parent 1
-    
-    rank1 = compute_rank_increase(parent_1.dodag, parent_1.dodag.rank)
-    rank2 = compute_rank_increase(parent_2.dodag, parent_2.dodag.rank)
+    rank1 = compute_rank(parent_1.dodag, parent_1.dodag.rank)
+    rank2 = compute_rank(parent_2.dodag, parent_2.dodag.rank)
 
     
     if (parent_1.dodag.DAGRank(rank1) != parent_2.dodag.DAGRank(rank2)): # step 8 in RFC 6552
