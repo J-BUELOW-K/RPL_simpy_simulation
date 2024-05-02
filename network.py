@@ -108,7 +108,7 @@ class Node:
     # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
          pass
     
-    def dio_handler(self, neighbor_node_id, dio_message: ICMP_DIO, neighbor_metric_object = None):
+    def dio_handler(self, senders_node_id, dio_message: ICMP_DIO, senders_metric_object = None):
         # see section 8 in RPL standarden (RFC 6550) 
         # Ehhh:
         #  DODAGID: The DODAGID is a Global or Unique Local IPv6 address of the
@@ -157,21 +157,27 @@ class Node:
             dodag_list_idx = len(rpl_instance_obj.dodag_list) - 1  # value is always just 0
 
         intance_reference = self.rpl_instances[rpl_instance_idx]
-        dodag_reference = self.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx]
+        dodag_reference = intance_reference.dodag_list[dodag_list_idx]
 
-        ####################  Check of there are any routing metric objects in the dio message ####################
+
+        ####################  CHECK IF SENDER IS A BETTER PREFERRED PARENT THAN THE CURRENT PREFERRED PARRENT - UPDATE STUFF IF IT IS ####################
 
         if dodag_reference.prefered_parent == None: # Our node does not have a prefered parent - we simply accept the DIO sender as prefered parent
-            dodag_reference.prefered_parent = neighbor_node_id
+            dodag_reference.prefered_parent = senders_node_id
             dodag_reference.prefered_parent_rank = dio_message.rank
-            dodag_reference.metric_object = self.increment_metric_object_from_neighbor(neighbor_metric_object) # update metric object
+            dodag_reference.metric_object = self.increment_metric_object_from_neighbor(senders_metric_object) # update metric object
             dodag_reference.rank = of0_compute_rank(dodag_reference, dodag_reference.prefered_parent_rank, dodag_reference.metric_object)  # update rank
         else:
             # test if sender is a better prefered parrent than current prefered parrent:
             #if of0_compare_parent(asdasd) == 1: # if sender is better parent
-            result, winner_rank = of0_compare_parent(dodag_reference.prefered_parent_rank, dio_message.rank, dodag_reference.)
-                
-            # HVIS VI VÆLGER EN NY PREFERED PARRENT, SKAL VI UPDATE prefered_parent, prefered_parent_rank, samt cumulative_hop_count/cumulative_etx hvis brugt
+            result, winner_rank = of0_compare_parent(dodag_reference.prefered_parent_rank, dio_message.rank, dodag_reference.metric_object, self.increment_metric_object_from_neighbor(senders_metric_object))
+            if result =="update parent":
+                # we found a better preferred parent!
+                dodag_reference.prefered_parent = senders_node_id
+                dodag_reference.prefered_parent_rank = dio_message.rank
+                dodag_reference.metric_object = self.increment_metric_object_from_neighbor(senders_metric_object) # update metric object
+                dodag_reference.rank = winner_rank # we can just use the rank computed from of0_compare_parent - we dont have to compute it again
+            
 
         
 
@@ -290,7 +296,7 @@ class Node:
             else: # if silent_mode = False
                 event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
-                    # broadcast_dio() # TODO
+                    # broadcast_dio() # TODO - NODEN SKAL VEL BROADCASTE ALLE DENS DODAGS TIL ALLE DENS CONNECTIONS
                     pass
                     pass
                 else: # event was a "message in input_msg_queue" event
