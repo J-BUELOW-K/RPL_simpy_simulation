@@ -18,8 +18,9 @@ class DAO_message:
     #        +                                                               +
     #        |                                                               |
     #        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #        |   Option(s)...
+    #        +-+-+-+-+-+-+-+-+
 
-    # Options bit field has been omitted.
 
     def __init__(self, rpl_instance_id = 0, k = False, d = False, flags = 0,\
                  reserved = 0, dao_sequence = 0, dodag_id = None):
@@ -33,7 +34,8 @@ class DAO_message:
         self.dao_sequence = dao_sequence            # Incremented at each unique DAO message from a node and echoed in the DAO-ACK message.
         self.dodag_id = dodag_id                    # Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
                                                     # present when the 'D' flag is set.
-
+        self.options =
+        
         self.__self_check()
 
     def __self_check(self):
@@ -65,8 +67,8 @@ class DAO_ACK_message:
     #    +                                                               +
     #    |                                                               |
     #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-    # Options bit field has been omitted.
+    #    |   Option(s)...
+    #    +-+-+-+-+-+-+-+-+
 
     def __init__(self, rpl_instance_id = 0, d = False, reserved = 0,\
                  dao_sequence = 0, status = None, dodag_id = None):
@@ -80,7 +82,8 @@ class DAO_ACK_message:
         self.status = status                        # Status 0: Unqualified acceptance (i.e., the node receiving the DAO-ACK is not rejected).
         self.dodag_id = dodag_id                    # Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
                                                     # present when the 'D' flag is set.
-        
+        self.options =
+
         self.__self_check()
 
     def __self_check(self):

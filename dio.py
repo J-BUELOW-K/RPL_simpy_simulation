@@ -20,8 +20,8 @@ class DIO_message:
     #    +                                                               +
     #    |                                                               |
     #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-    # Options has been omitted
+    #    |   Option(s)...
+    #    +-+-+-+-+-+-+-+-+
 
     def __init__(self, rpl_instance_id = 0, version = 0, rank = 0, g = False, mop = 0,\
                  prf = None, dtsn = None, flags = 0, reserved = 0, dodag_id = 0):
@@ -43,6 +43,7 @@ class DIO_message:
         self.reserved = reserved                    # MUST be set to 0 by sender and ignored by receiver.
         self.dodag_id = dodag_id                    # IPv6 address set by a DODAG root that uniquely identifies a DODAG. The DODAGID 
                                                     # MUST be a routable IPv6 address belonging to the DODAG root.
+        self.options =
 
         self.__self_check()
 
