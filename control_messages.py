@@ -63,12 +63,12 @@ class DIO:
 
     # Options field is implemented in the ICMP_DIO
 
-    def __init__(self, rpl_instance_id, vers, rank, g_flag, dodag_id,\
+    def __init__(self, rpl_instance_id: int, vers: int, rank: int, g_flag: bool, dodag_id: int,\
                  mop = 0, prf = 0, dtsn = 0, flags = 0, reserved = 0):
 
         self.rpl_instance_id = rpl_instance_id      # Set by the DODAG root and indicate which RPL Instance the DODAG is a part of.
-        self.vers = vers                            # TODO Unsigned integer set by the DODAG root to the DODAGVersionNumber           
-        self.rank = rank                            # TODO Unsigned integer indicating the DODAG Rank of the node sending the DIO message
+        self.vers = vers                            # Unsigned integer set by the DODAG root to the DODAGVersionNumber           
+        self.rank = rank                            # Unsigned integer indicating the DODAG Rank of the node sending the DIO message
         self.g_flag = g_flag                        # The Grounded 'G' flag indicates whether the DODAG advertised can satisfy the 
                                                     # application-defined goal. If the flag is set, the DODAG is grounded. If the 
                                                     # flag is cleared, the DODAG is floating.
@@ -84,6 +84,13 @@ class DIO:
         self.dodag_id = dodag_id                    # IPv6 address set by a DODAG root that uniquely identifies a DODAG. The DODAGID 
                                                     # MUST be a routable IPv6 address belonging to the DODAG root.
         
+    def __self_check(self):
+        
+        if self.vers < 0:
+            raise ValueError("Version MUST be an unsigned int")
+        if self.rank < 0:
+            raise ValueError("Rank MUST be an unsigned int")
+
 
         # All fields included, however not all are necessarily used.
         # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.3
@@ -239,7 +246,7 @@ class ICMP_DIO:
     # The options field of the ICMP_DIO is limited to 1 option per packet. 
     # This is in contrast to the standard.
 
-    def __init__(self, rpl_instance_id, vers, rank, g_flag, dodag_id):
+    def __init__(self, rpl_instance_id: int, vers: int, rank: int, g_flag: bool, dodag_id: int):
 
         self.ICMP = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIO)
         self.DIO = DIO(rpl_instance_id = rpl_instance_id,\
@@ -274,7 +281,7 @@ class ICMP_DAO_ACK:
 
 class Packet:
 
-    def __init__(self, src_node_id, payload):
+    def __init__(self, src_node_id: int, payload):
         
         self.src_node_id = src_node_id
         self.payload = payload
