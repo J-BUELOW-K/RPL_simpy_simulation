@@ -207,13 +207,13 @@ class HP_OBJ():
     # Hop count may be used as a metric or as a constraint. Is only used as a metric
     # TODOThe first node on the path (not including the sender) must set this value to 1
     
-    def __init__(self, HP, res = 0, flags = 0):
+    def __init__(self, cumulative_hop_count, res = 0, flags = 0):
         
         self.res = res                              # Reserved field.  This field MUST be set to zero on 
                                                     # transmission and MUST be ignored on receipt.
         self.flags = flags                          # No Flag is currently defined.  Unassigned bits are considered reserved.
                                                     # They MUST be set to zero on transmission and MUST be ignored on receipt.
-        self.HP = HP                                # Hop Count - Used as a metric
+        self.cumulative_hop_count = cumulative_hop_count                                 # Cumulative hop count to root - Used as a metric
 
     # Referce: https://datatracker.ietf.org/doc/html/rfc6551#section-3.3
 
@@ -233,9 +233,9 @@ class ETX_OBJ():
 
     # according to RFC6551 the ETX value applies some encoding scheme. This is not used in this project.
 
-    def __init__(self, ETX):
+    def __init__(self, cumulative_etx):
         
-        self.ETX = ETX                              # TODO Expected transmission count value. MUST be unsigned
+        self.cumulative_etx = cumulative_etx     # Cumulative etx to root
 
     # Referce: https://datatracker.ietf.org/doc/html/rfc6551#section-4.3.2
 
@@ -259,15 +259,12 @@ class ICMP_DIO:
                        dodag_id = dodag_id
                        )
         self.option = None
-        self.option_type = None
 
     def add_HP_metric(self, HP):
         self.option = HP_OBJ(HP = HP) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
-        self.option_type = "HP"
 
     def add_ETX_metric(self, ETX):
         self.option = ETX_OBJ(ETX = ETX) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
-        self.option_type = "ETX"
 
 
 

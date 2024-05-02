@@ -6,6 +6,7 @@ import math
 from dodag import Rpl_Instance, Dodag
 from control_messages import *
 from OF0 import of0_compute_rank, of0_compare_parent
+from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
@@ -32,6 +33,14 @@ def estimate_etx(distance: float, model: str) -> float:
     elif model == "fspl":
         fspl = pow((4*math.pi*distance*LINK_FREQ) / SPEED_OF_LIGHT, 2)  # https://en.wikipedia.org/wiki/Free-space_path_loss
         return fspl
+    
+# def increase_metric_value(metric_object, metric_object_type):
+#     if metric_object_type == None:
+#         return None
+#     elif metric_object_type == "HP":
+#         metric_object.cumulative_hop_count += 1
+    
+
 
 
 class Node:
@@ -67,6 +76,18 @@ class Node:
         self.neighbors.append((neighbor_object, connection_object))
         pass
 
+    def increment_metric_object_from_neighbor(self, neighbors_metric_object, neighbors_node_id): # helper function used to increment a metric object recieved from a neighbor - to include path from neighbor to this node
+        if METRIC_OBJECT_TYPE == METRIC_OBJECT_NONE:
+            return None
+        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+            neighbors_metric_object.cumulative_hop_count += 1
+        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
+            for neighbor in self.neighbors:
+                if neighbor[0].node_id == neighbors_node_id:
+                    neighbors_metric_object.cumulative_hop_count += neighbor[1].etx_value
+        return neighbors_metric_object
+                    
+
     def broadcast_message(self, msg):
         # broadcast message to all neighbors 
         for neighbor in self.neighbors:
@@ -87,7 +108,7 @@ class Node:
     # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
          pass
     
-    def dio_handler(self, source_node_id, dio_message: ICMP_DIO, metric_object = None, metric_object_type = None):
+    def dio_handler(self, neighbor_node_id, dio_message: ICMP_DIO, neighbor_metric_object = None):
         # see section 8 in RPL standarden (RFC 6550) 
         # Ehhh:
         #  DODAGID: The DODAGID is a Global or Unique Local IPv6 address of the
@@ -141,13 +162,16 @@ class Node:
         ####################  Check of there are any routing metric objects in the dio message ####################
 
         if dodag_reference.prefered_parent == None: # Our node does not have a prefered parent - we simply accept the DIO sender as prefered parent
-            dodag_reference.prefered_parent = source_node_id
+            dodag_reference.prefered_parent = neighbor_node_id
             dodag_reference.prefered_parent_rank = dio_message.rank
-            dodag_reference.rank = of0_compute_rank(dodag_reference, dodag_reference.prefered_parent_rank, metric_object, metric_object_type)  # we still have to recompute the rank
+            dodag_reference.metric_object = self.increment_metric_object_from_neighbor(neighbor_metric_object) # update metric object
+            dodag_reference.rank = of0_compute_rank(dodag_reference, dodag_reference.prefered_parent_rank, dodag_reference.metric_object)  # update rank
         else:
             # test if sender is a better prefered parrent than current prefered parrent:
-            if of0_compare_parent(asdasd) == 1: # if sender is better parent
+            #if of0_compare_parent(asdasd) == 1: # if sender is better parent
+            result, winner_rank = of0_compare_parent(dodag_reference.prefered_parent_rank, dio_message.rank, dodag_reference.)
                 
+            # HVIS VI VÆLGER EN NY PREFERED PARRENT, SKAL VI UPDATE prefered_parent, prefered_parent_rank, samt cumulative_hop_count/cumulative_etx hvis brugt
 
         
 
