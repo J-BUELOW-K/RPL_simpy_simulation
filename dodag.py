@@ -3,10 +3,7 @@ import math
 import time
 
 
-
-
-
-
+# Constants
 ROOT_RANK = 0
 MAX_RANK = 0xFFFF
 
@@ -15,8 +12,8 @@ MAX_RANK = 0xFFFF
 
 
 
-def dag_rank_macro(rank: float, MinHopRankIncrease: float) -> int: # Returns Interger part of rank. see sec 3.5.1 in RPL standard for more info
-    return math.floor(rank/MinHopRankIncrease)
+# def dag_rank_macro(rank: float, MinHopRankIncrease: float) -> int: # Returns Interger part of rank. see sec 3.5.1 in RPL standard for more info
+#     return math.floor(rank/MinHopRankIncrease)
     
 
 
@@ -27,10 +24,12 @@ def dag_rank_macro(rank: float, MinHopRankIncrease: float) -> int: # Returns Int
 class Dodag:
 
     def __init__(self, dodag_id, dodag_version_num, is_root = False, MinHopRankIncrease = 256.0):
-        self.dodag_id = dodag_id
-        self.dodag_version_num = dodag_version_num
-        self.MinHopRankIncrease = MinHopRankIncrease
-        self.last_dio = time.time()
+        self.dodag_id = dodag_id # 0
+        self.dodag_version_num = dodag_version_num # 0
+        self.MinHopRankIncrease = MinHopRankIncrease # 256.0
+        self.last_dio = time.time() # TODO skal være en timestamp
+        self.prefered_parent = None
+        # TODO tilføj prefered parent maybe a tuple (node, rank, ETX)
 
         if is_root:
             self.rank = ROOT_RANK
@@ -43,8 +42,12 @@ class Dodag:
     def set_rank(self, rank):
         self.rank = rank
         
+        
+    def set_prefered_parent(self, parent):
+        ...
+        
     def DAGRank(self, rank):
-        return math.floor(float(rank)/ self.MinHopRankIncrease)
+        return math.floor(float(rank)/ self.MinHopRankIncrease) # Returns Interger part of rank. see sec 3.5.1 in RPL standard for more info
 
     # er ikker sikker på om vi skal bruge float rank eller DAGRank() (interger part) her
 
