@@ -1,7 +1,9 @@
 import simpy
 from network import *
+import defines
 
 SIM_TIME = 1000
+
 
 def main():
     print("hello world")
@@ -10,7 +12,7 @@ def main():
     # Setup simulation
     env = simpy.Environment()
     nw = Network(env)
-    nw.generate_nodes_and_edges(70, 0.2)
+    nw.generate_nodes_and_edges(defines.NUMBER_OF_NODES, defines.RADIUS)
     nw.plot()
     nw.register_node_processes(env)
 
@@ -44,7 +46,7 @@ def main():
 
 
 
-
+3
 
 
 
