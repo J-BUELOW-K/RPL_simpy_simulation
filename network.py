@@ -7,6 +7,11 @@ import math
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
 
+MAX_ETX = 0xFFFF
+MAX_DISTANCE = 0xFFFF
+
+NODE_TRANSMIT_TIMER = 200 # Periodic transmit timer - in simpy time units
+
 def estimate_etx(distance: float, model: str) -> float:
     # ETX calc is not specific, however is it usually calculated as: ETX = 1 / (Df*Dr) 
                                         # where Df is the measured probability that a packet is received by the neighbor and Dr is 
@@ -27,25 +32,68 @@ def estimate_etx(distance: float, model: str) -> float:
 
 
 class Node:
-    def __init__(self, node_id, xpos, ypos, rank = 999):
+
+    # MÅSKE ET TUPLE med Dodag object og tilhørende rank. eller skal rank være de del af dodag objetktet?
+    
+    # Liste med Rpl_Instances (inde i den er listen DODAGS)
+
+    # TODO tilføj contrains liste
+
+    # lav funktion et sted til at broadcast til alle connection (tager senderens node_id som input)
+    # HUSK, man skal ikke kun yeild på put(), men også get() (e.g. yield store.put(f'spam {i}'))
+    #    hmm... men i Process Communication example yielder de ikke på put. det kommer nok an på om man vil sidde stuck indtil den er sendt, eller bare komme videre idk
+    # Problem. hvordan tingår en node andre nodes input queues. er det ikke kun noget netwærk objektet kan?? tænk over det
+
+    def __init__(self, env, node_id, xpos, ypos):
+
+        # Physical network values:
+        self.env = env
         self.node_id = node_id
-        self.rank = rank
         self.xpos = xpos  # used to estimate ETX
         self.ypos = ypos  # used to estimate ETX
+        self.neighbors = [] # list of all neighboring nodes (aka other nodes which this node has a connection/edge to). This list is filled with other Node objects
 
-    def set_rank(self, rank):   # TODO: DEN HER RANK SKAL VÆRE EN DEL AF DODAG. DEN HAR NOK IKKE NOGET MED VORES NETWÆRK AT GØRE
-        self.rank = rank
+        # RPL values:_
+        self.rpl_instaces = [] # list of RPLIncances that the node is a part of (contains all dodags)
+        self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
+        self.silent_mode = True  # node will stay silent untill (this approach is mentioned as valid in the RPL standard)
 
-    def send_to(self, asd):
+    def add_to_neighbors_list(self, neighbor_object):
+        self.neighbors.append(neighbor_object)
         pass
+
+    def broadcast_message(self, msg):
+        # broadcast message to all neighbors 
+        for neighbor in self.neighbors:
+            neighbor.input_msg_queue.put(msg)   # some simpy examples yield at put(), some dont
+
+    def broadcast_dio(self):
+        #lav dio object (måske fra en funktion i en anden fil) # ænk over  hvordan den får info til at lave dio objekete. hvordan det lige virker...
+        # MÅSKE er broadcast_dio difineret i en anden fil (der hvor dio handleren er) - og så gør den fil bare brug af node_objectet.broadcast_message (skal man noden så passe sig selv? hvordan virker det? kan man passe "self" måske)
+        #broadcast_message(dio_object)
+
+        # TODO i OF0 "Selection of the Preferred Parent" Step 1, nævner de at en nabo skal overholder alle steps fra 8.2.1 i RPL standarden, før den overhoevedet kan overvejes i OF0.
+        # TODO Dio beskeder kan carry options - overvej om vi skal sende en metric object med dio beskederne (forskellige metric objekter er definineret i RFC 6551) (se sec 6.3.3 og 6.7.4 i RPL stanarden)
+
+    # def dio_handler(self):  # om det her skal være i method i Node, eller en funktion i dodag.py file, er spørgsmålet.. det kommer an på hvor meget handleren skal bruge af variabler er i klassen. Hvis den ikke skal bruge nogle self variabler.. så bare lav den i dodag.py filen
+    #     pass
 
     def run(self, env):  # Simpy process
         while(True):
-            #print(f"hehe: {self.node_id}")
-            yield env.timeout(2000) #placeholder
+            print(f"hehe: {self.node_id}")
+            if self.silent_mode == True:
+                message = yield self.input_msg_queue.get()
+                self.silent_mode = False
+                # msg_handler(message) # TODO
+            else: # if silent_mode = False
+                event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
+                if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
+                    # broadcast_dio() # TODO
+                else: # event was a "message in input_msg_queue" event
+                    # msg_handler(message)  # TODO
 
 class Connection:
-    def __init__(self, from_node, to_node, etx_value = 9999, distance = 9999):
+    def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
         self.from_node = from_node
         self.to_node = to_node
         self.etx_value = etx_value
@@ -54,7 +102,8 @@ class Connection:
 class Network:
     # https://networkx.org/documentation/stable/auto_examples/drawing/plot_random_geometric_graph.html 
 
-    def __init__(self):
+    def __init__(self, env):
+        self.env = env
         self.nodes = []
         self.connections = [] # this line is not strickly needed (is here for completeness)
         pass
@@ -62,16 +111,16 @@ class Network:
     def generate_nodes_and_edges(self, number_of_nodes: int, radius: float, seed = None):
 
         # Generate geometric network (nodes are places at random, edges are drawn if within radius):
-        self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI KAN GODT LADE DEN STÅ OM NU
+        while(True):
+            self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI LADER DEN BARE STÅ
+            if nx.is_connected(self.networkx_graph): break #if graph is not connected, try again...
+
         # tranlate networkx nodes/edges to our own nodes/connections setup (to make them easier to work with):
         self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
         # self.nodes = [Node(node_id = x) for x in self.networkx_graph.nodes()] # does not include position
         for node in self.networkx_graph.nodes(data="pos"):
-            self.nodes.append(Node(node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
+            self.nodes.append(Node(self.env, node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
                                                                                               # note: node_id matches index in self.nodes array!
-
-        # Select a root node by "random" (we simply choose the root with root_it 0):
-        self.nodes[0].rank = 0    # TODO: DEN HER RANK SKAL VÆRE EN DEL AF DODAG. DEN HAR NOK IKKE NOGET MED VORES NETWÆRK AT GØRE
 
         # Estimate relative ETX values for each connection:
         for connection in self.connections:
@@ -79,7 +128,17 @@ class Network:
             b = self.nodes[connection.to_node].ypos    # assumption: index in self.nodes array matches node_id
             connection.distance = math.sqrt(a**2 + b**2) # pythagoras
             connection.etx_value = estimate_etx(connection.distance, "fspl")
-            print(f"distance:{connection.distance}  etx:{connection.etx_value}")
+            #print(f"distance:{connection.distance}  etx:{connection.etx_value}")
+
+        # Make all nodes aware of their neighbors:
+        for connection in self.connections:
+            # note: At network cration, connection/edges are NOT generated in both directions between nodes. Therefore, we inform both nodes in a connection about the neighboring node
+            self.nodes[connection.from_node].add_to_neighbors_list(self.nodes[connection.to_node])  # assumption: index in self.nodes array matches node_id
+            self.nodes[connection.to_node].add_to_neighbors_list(self.nodes[connection.from_node])  # assumption: index in self.nodes array matches node_id
+
+
+        # for connection in self.connections:
+        #     print(f"connection from:{connection.from_node} to:{connection.to_node}")
 
     def register_node_processes(self, env):
         for node in self.nodes:

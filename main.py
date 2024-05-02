@@ -1,6 +1,7 @@
 import simpy
 from network import *
 
+SIM_TIME = 1000
 
 def main():
     print("hello world")
@@ -8,7 +9,7 @@ def main():
 
     # Setup simulation
     env = simpy.Environment()
-    nw = Network()
+    nw = Network(env)
     nw.generate_nodes_and_edges(70, 0.2)
     nw.plot()
     nw.register_node_processes(env)
@@ -16,7 +17,7 @@ def main():
     # TODO: VI SKAL HAVE EN MÅDE HVOR VORES NETWÆRK IKKE KAN HAVE NODE NETWÆRK DER "FLYVER" UDE I INGENTING, for hvis en af de nodes bliver valgt til root er vi fucked
 
     # Execute simulation
-    env.run()
+    env.run(until=SIM_TIME)
 
 
     #Vi leder efter Geometric grapghs!
@@ -85,6 +86,8 @@ def plot_dodag(): # SKAL NOK VÆRE EN METHOD I DODAG CLASSEN
     layers = {"b": [4,5], "c": [1,2,3], "d": [0]}  #når jeg skal gøre det automatisk. start med tomt array. så bare brug rank til at start fra bunden og op, hvor jeg appender hver lag
     pooos = nx.multipartite_layout(G, subset_key=layers, align="horizontal")
     nx.draw(G,pos=pooos,with_labels=True)
+
+    # ER RET SIKKER PÅ VI SKAL BRUGE intergar part of rank (aka dag_rank_macro()) når vi plotter!!!!! Ikke den fulde float rank!
 
     #VI SKAL NOK BRUGE DRAW MED POS = multipartite_layout() TIL AT TEGNE DAGS https://networkx.org/documentation/stable/auto_examples/graph/plot_dag_layout.html
     plt.show()
