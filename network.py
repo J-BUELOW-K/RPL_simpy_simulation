@@ -478,11 +478,12 @@ class Network:
 
         plt.show()
 
-    def plot_resulting_dodag(self):
+    def plot_resulting_dodag(self): # input: rpl instance, dodag id og dodag version
         #TODO SKAL RENT FAKTISK LAVE ET PLOT 
         for node in self.nodes:
             print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
 
+    
 
         # def plot_dodag(): # SKAL NOK VÆRE EN METHOD I DODAG CLASSEN
         # G = nx.DiGraph()
