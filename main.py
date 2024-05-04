@@ -21,6 +21,7 @@ def main():
     # Execute simulation
     env.run(until=SIM_TIME)
 
+    # TODO print dodag her (lav til funktion i netowrk klassen, der hent rank og parent fra alle nodes og plotter dem)
 
     #Vi leder efter Geometric grapghs!
     # https://networkx.org/documentation/stable/reference/generators.html

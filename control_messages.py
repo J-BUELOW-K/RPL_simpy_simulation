@@ -249,15 +249,13 @@ class ICMP_DIO:
     # The options field of the ICMP_DIO is limited to 1 option per packet. 
     # This is in contrast to the standard.
 
-    def __init__(self, rpl_instance_id: int, vers: int, rank: int, g_flag: bool, dodag_id: int):
+    def __init__(self, rpl_instance_id: int, vers: int, rank: int, dodag_id: int):
 
-        self.ICMP = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIO)
-        self.DIO = DIO(rpl_instance_id = rpl_instance_id,\
+        self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIO)
+        self.dio = DIO(rpl_instance_id = rpl_instance_id,\
                        vers = vers,\
                        rank = rank,\
-                       g_flag = g_flag,\
-                       dodag_id = dodag_id
-                       )
+                       dodag_id = dodag_id )
         self.option = None
 
     def add_HP_metric(self, HP):

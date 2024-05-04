@@ -16,7 +16,7 @@ from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOU
 
 class Dodag:
 
-    def __init__(self, dodag_id, dodag_version_num, is_root = False):  # , MinHopRankIncrease = 256.0):
+    def __init__(self, dodag_id, dodag_version_num, rank = defines.INFINITE_RANK):  # , MinHopRankIncrease = 256.0):
         self.dodag_id = dodag_id # 0
         self.dodag_version_num = dodag_version_num # 0
         #self.MinHopRankIncrease = MinHopRankIncrease # 256.0
@@ -24,20 +24,17 @@ class Dodag:
         self.prefered_parent = None # node_id of prefered parent
         self.prefered_parent_rank = defines.INFINITE_RANK
 
+        self.rank = rank
+
         self.metric_object = None
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
             self.metric_object = control_messages.HP_OBJ(defines.INFINITE_HOP_COUNT)
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
             self.metric_object = control_messages.ETX_OBJ(defines.INFINITE_CUMULATIVE_ETX)
 
-
-        if is_root:
-            self.rank = defines.ROOT_RANK
-        else:
-            self.rank = defines.INFINITE_RANK
-        self.rank 
-
         # TODO der skal måske være noget herinde til at holde alt dodag info fra de andre nodes (info man får i DIO beskederne)(en liste)
+
+    
 
     # def set_rank(self, rank):
     #     self.rank = rank

@@ -4,7 +4,7 @@ import math
 from dodag import Dodag
 import defines
 from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX
-from network import Node
+#from network import Node
 
 
 # # Objective Code Point
