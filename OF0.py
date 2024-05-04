@@ -65,6 +65,10 @@ def of0_compute_rank(parent_rank, metric_object = None):
         pass # TODO map hop count til STEP_OF_RANK mellem 1 og 9 
     elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
         pass # TODO map ETX til STEP_OF_RANK mellem 1 og 9
+        # måske er https://mailarchive.ietf.org/arch/msg/6tisch/ijlk2XYM6Xz7xQtTB88DMSNjRdw/ brugbar
+        # aka måske Sp = a*ETX + b .
+        # hvor man lige skal tænke over hvad a skal være (ivhertfald noget scalere ETX ned, fordi vores ETX er stor.)
+        # (husk også at step_of_rank skal være et heltal)
     else:
         pass # TODO lav error med invalid param
 
