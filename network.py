@@ -5,17 +5,15 @@ import matplotlib.pyplot as plt
 import math
 from dodag import Rpl_Instance, Dodag
 from control_messages import *
-from OF0 import of0_compute_rank, of0_compare_parent
+from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
 import defines
-from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX
+from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX, NODE_TRANSMIT_TIMER
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
 
 MAX_ETX = 0xFFFF
 MAX_DISTANCE = 0xFFFF
-
-NODE_TRANSMIT_TIMER = 200 # Periodic transmit timer - in simpy time units
 
 def estimate_etx(distance: float, model: str) -> float:
     # ETX calc is not specific, however is it usually calculated as: ETX = 1 / (Df*Dr) 
@@ -49,7 +47,7 @@ def find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version): #
     # Find associated RPL Instance:
     for i in range(len(rpl_instances)):
         if rpl_instances[i].rpl_instance_id == rpl_instance_id:
-            print("debug: matching RPL Instance entry found!")
+            #print("debug: matching RPL Instance entry found!")
             rpl_instance_idx = i
 
     if rpl_instance_idx != None: # If there exists an entry for the recieved RPL instance in self.rpl_instances!
@@ -57,7 +55,7 @@ def find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version): #
         for i in range(len(rpl_instances[rpl_instance_idx].dodag_list)):
             temp_dodag = rpl_instances[rpl_instance_idx].dodag_list[i]
             if temp_dodag.dodag_id == dodag_id and temp_dodag.dodag_version_num == dodag_version: # Both ID and Version has to match!
-                print("debug: matching dodag entry found!")
+                #print("debug: matching dodag entry found!")
                 dodag_list_idx = i
 
     return rpl_instance_idx, dodag_list_idx
@@ -147,46 +145,7 @@ class Node:
 
         
 
-
-
-
         ####################  Find RPL Instance and Dodag in the nodes self.rpl_instaces list - If no entries, we create them ####################
-
-        # rpl_instance_idx = None
-        # dodag_list_idx = None
-
-        # # Find associated RPL Instance:
-        # for i in range(len(self.rpl_instances)):
-        #     if self.rpl_instances[i].rpl_instance_id == dio_message.rpl_instance_id:
-        #         print("debug: matching RPL Instance entry found!")
-        #         rpl_instance_idx = i
-
-        # if rpl_instance_idx != None: # If there exists an entry for the recieved RPL instance in self.rpl_instaces!
-        #     # Find associated Dodag:
-        #     for i in range(len(self.rpl_instances[rpl_instance_idx].dodag_list)):
-        #         temp_dodag = self.rpl_instances[rpl_instance_idx].dodag_list[i]
-        #         if temp_dodag.dodag_id and temp_dodag.dodag_version_num: # Both ID and Version has to match!
-        #             print("debug: matching dodag entry found!")
-        #             dodag_list_idx = i
-        #     if dodag_list_idx == None:
-        #         # Create Dodag entry in the RPL Instance
-        #         # husk at set dodag_list_idx
-        #         dodag_object = Dodag(dio_message.dodag_id, dio_message.version)
-        #         self.rpl_instances[rpl_instance_idx].add_dodag(dodag_object)
-        #         dodag_list_idx = len(self.rpl_instances[rpl_instance_idx].dodag_list) - 1 # value is always just 0
-        #         pass 
-            
-        # else: # No entry in self.rpl_instaces for recieved RPL instance! Create one!
-        #     dodag_object = Dodag(dio_message.dodag_id, dio_message.version)
-        #     rpl_instance_obj = Rpl_Instance(dio_message.rpl_instance_id)
-        #     rpl_instance_obj.add_dodag(dodag_object)
-        #     self.rpl_instances.append(rpl_instance_obj)
-        #     rpl_instance_idx = len(self.rpl_instances) - 1 # there might already be entries for other instances in the self.rpl_instaces list
-        #     dodag_list_idx = len(rpl_instance_obj.dodag_list) - 1  # value is always just 0
-
-        # intance_reference = self.rpl_instances[rpl_instance_idx]
-        # dodag_reference = intance_reference.dodag_list[dodag_list_idx]
-
 
         # V2:
         rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, dio_message.rpl_instance_id, \
@@ -211,6 +170,9 @@ class Node:
         dodag_reference = intance_reference.dodag_list[dodag_list_idx]
 
 
+        ####################  asdasdasd ####################  
+        if dodag_reference.rank == defines.ROOT_RANK:
+            return
 
 
         ####################  CHECK IF SENDER IS A BETTER PREFERRED PARENT THAN THE CURRENT PREFERRED PARRENT - UPDATE STUFF IF IT IS ####################
@@ -344,7 +306,7 @@ class Node:
 
     def packet_handler(self, packet: Packet):
         # Read ICMP Header:
-        print(f"yesdu: {packet}")
+        #print(f"yesdu: {packet}")
         icmp_header = packet.payload.icmp
         if icmp_header.type != defines.TYPE_RPL_CONTOL_MSG:
             # invalid packet - ignore it
@@ -473,12 +435,12 @@ class Network:
                 raise ValueError 
             else:
                 # Create DODAG in root node, within the already existing RPL Instance
-                new_dodag = Dodag(dodag_id, dodag_version, rank = 0) # setting rank to 0 makes the node the root!
+                new_dodag = Dodag(dodag_id, dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
                 root_node.rpl_instances[rpl_instance_idx].add_dodag(new_dodag)
         else:
             # No matching RPL entry exists in root node - create one! (including dodag):
             new_rpl_instance = Rpl_Instance(rpl_instance_id)
-            new_dodag = Dodag(dodag_id, dodag_version, rank = 0) # setting rank to 0 makes the node the root!
+            new_dodag = Dodag(dodag_id, dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
             new_rpl_instance.add_dodag(new_dodag)
             root_node.rpl_instances.append(new_rpl_instance)
 
@@ -515,3 +477,8 @@ class Network:
         # nx.draw_networkx_edge_labels(self.networkx_graph, pos, edge_labels=etx_labels, font_size = 6)#verticalalignment="baseline")
 
         plt.show()
+
+    def plot_resulting_dodag(self):
+        #TODO SKAL RENT FAKTISK LAVE ET PLOT 
+        for node in self.nodes:
+            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, rank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")

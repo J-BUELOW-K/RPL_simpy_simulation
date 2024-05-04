@@ -9,8 +9,11 @@ CODE_DAO_ACK = 3
 TYPE_RPL_CONTOL_MSG = 155
 
 """Network defines"""
+SIM_TIME = 500
 NUMBER_OF_NODES = 70
 RADIUS = 0.2
+
+NODE_TRANSMIT_TIMER = 5 # Periodic transmit timer - in simpy time units
 
 """dodag defines"""
 ROOT_RANK = 0

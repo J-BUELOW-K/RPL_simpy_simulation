@@ -86,7 +86,7 @@ def of0_compare_parent(current_parent_rank, challenger_parent_rank, metric_objec
     rank_through_current_parent = of0_compute_rank(current_parent_rank, metric_object_through_current_parrent)
     rank_through_challenger_parent = of0_compute_rank(challenger_parent_rank, metric_object_through_challenger)
 
-    if DAGRank(rank_through_challenger_parent) > DAGRank(rank_through_current_parent):    # only choose challenger parent as new prefered parent IF it results in a better DAGRank (if equal, keep current parent)
+    if DAGRank(rank_through_challenger_parent) < DAGRank(rank_through_current_parent):    # only choose challenger parent as new prefered parent IF it results in a better DAGRank (if equal, keep current parent)
         # note, DAGRank() is used when comparing ranks (see RPL standard)
         return "update parent", DAGRank(rank_through_challenger_parent)
     else:

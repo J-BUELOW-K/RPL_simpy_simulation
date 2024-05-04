@@ -2,7 +2,7 @@ import simpy
 from network import *
 import defines
 
-SIM_TIME = 1000
+
 
 
 def main():
@@ -20,8 +20,9 @@ def main():
     # TODO: VI SKAL HAVE EN MÅDE HVOR VORES NETWÆRK IKKE KAN HAVE NODE NETWÆRK DER "FLYVER" UDE I INGENTING, for hvis en af de nodes bliver valgt til root er vi fucked
 
     # Execute simulation
-    env.run(until=SIM_TIME)
+    env.run(until=defines.SIM_TIME)
 
+    nw.plot_resulting_dodag()
     # TODO print dodag her (lav til funktion i netowrk klassen, der hent rank og parent fra alle nodes og plotter dem)
 
     #Vi leder efter Geometric grapghs!
