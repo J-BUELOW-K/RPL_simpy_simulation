@@ -63,7 +63,7 @@ class DIO:
 
     # Options field is implemented in the ICMP_DIO
 
-    def __init__(self, rpl_instance_id: int, vers: int, rank: int, g_flag: bool, dodag_id: int,\
+    def __init__(self, rpl_instance_id: int, vers: int, rank: int, dodag_id: int, g_flag: bool = True, \
                  mop = 0, prf = 0, dtsn = 0, flags = 0, reserved = 0):
 
         self.rpl_instance_id = rpl_instance_id      # Set by the DODAG root and indicate which RPL Instance the DODAG is a part of.
@@ -255,7 +255,7 @@ class ICMP_DIO:
         self.dio = DIO(rpl_instance_id = rpl_instance_id,\
                        vers = vers,\
                        rank = rank,\
-                       dodag_id = dodag_id )
+                       dodag_id = dodag_id)
         self.option = None
 
     def add_HP_metric(self, HP):

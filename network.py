@@ -83,8 +83,8 @@ class Node:
         self.node_id = node_id
         self.xpos = xpos  # used to estimate ETX
         self.ypos = ypos  # used to estimate ETX
-        self.neighbors = [] # List of all neighboring nodes and associated connection objects (aka other nodes which this node has a connection/edge to) 
-                            # Each element is a tuple: (node object, connection object). 
+        self.neighbors = [] # Each element is a tuple: (node object, connection object). 
+                            # List of all neighboring nodes and associated connection objects (aka other nodes which this node has a connection/edge to) 
                             # This list has nothing to do with any RPLInstance or DODAG, its simply information about the physical network.
 
         # RPL values:
@@ -111,7 +111,7 @@ class Node:
     def broadcast_packet(self, packet):
         # broadcast message to all neighbors 
         for neighbor in self.neighbors:
-            neighbor.input_msg_queue.put(packet)   # some simpy examples yield at put(), some dont
+            neighbor[0].input_msg_queue.put(packet)   # some simpy examples yield at put(), some dont
 
     # def debug_print_neighbors(self):
     #     for nabo in self.neighbors:
@@ -189,11 +189,11 @@ class Node:
 
 
         # V2:
-        rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, dio_message.rpl_instance_id \
+        rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, dio_message.rpl_instance_id, \
                                                       dio_message.dodag_id, dio_message.vers)
         if rpl_instance_idx == None:
             # No entry in self.rpl_instaces for recieved RPL instance! Create one!
-            dodag_object = Dodag(dio_message.dodag_id, dio_message.version)
+            dodag_object = Dodag(dio_message.dodag_id, dio_message.vers)
             rpl_instance_obj = Rpl_Instance(dio_message.rpl_instance_id)
             rpl_instance_obj.add_dodag(dodag_object)
             self.rpl_instances.append(rpl_instance_obj)
@@ -215,21 +215,23 @@ class Node:
 
         ####################  CHECK IF SENDER IS A BETTER PREFERRED PARENT THAN THE CURRENT PREFERRED PARRENT - UPDATE STUFF IF IT IS ####################
 
+        metric_object_through_neighbor = self.increment_metric_object_from_neighbor(senders_metric_object, senders_node_id)
+
         if dodag_reference.prefered_parent == None: # Our node does not have a prefered parent - we simply accept the DIO sender as prefered parent
             dodag_reference.prefered_parent = senders_node_id
             dodag_reference.prefered_parent_rank = dio_message.rank
-            dodag_reference.metric_object = self.increment_metric_object_from_neighbor(senders_metric_object) # update metric object
-            dodag_reference.rank = of0_compute_rank(dodag_reference, dodag_reference.prefered_parent_rank, dodag_reference.metric_object)  # update rank
+            dodag_reference.metric_object = metric_object_through_neighbor # update metric object
+            dodag_reference.rank = of0_compute_rank(dodag_reference.prefered_parent_rank, dodag_reference.metric_object)  # update rank
         else:
             # test if sender is a better prefered parrent than current prefered parrent:
             #if of0_compare_parent(asdasd) == 1: # if sender is better parent
             result, winner_rank = of0_compare_parent(dodag_reference.prefered_parent_rank, dio_message.rank, \
-                                                     dodag_reference.metric_object, self.increment_metric_object_from_neighbor(senders_metric_object))
+                                                     dodag_reference.metric_object, metric_object_through_neighbor)
             if result =="update parent":
                 # we found a better preferred parent!
                 dodag_reference.prefered_parent = senders_node_id
                 dodag_reference.prefered_parent_rank = dio_message.rank
-                dodag_reference.metric_object = self.increment_metric_object_from_neighbor(senders_metric_object) # update metric object
+                dodag_reference.metric_object = metric_object_through_neighbor # update metric object
                 dodag_reference.rank = winner_rank # we can just use the rank computed from of0_compare_parent - we dont have to compute it again
             
 
@@ -342,7 +344,8 @@ class Node:
 
     def packet_handler(self, packet: Packet):
         # Read ICMP Header:
-        icmp_header = packet.payload.ICMP
+        print(f"yesdu: {packet}")
+        icmp_header = packet.payload.icmp
         if icmp_header.type != defines.TYPE_RPL_CONTOL_MSG:
             # invalid packet - ignore it
             return
@@ -359,11 +362,13 @@ class Node:
 
     def run(self, env):  # Simpy process
         while(True):
-            print(f"hehe: {self.node_id}")
+            #print(f"hehe: {self.node_id}")
             if self.silent_mode == True:
                 message = yield self.input_msg_queue.get()
                 self.silent_mode = False
-                # msg_handler(message) # TODO
+                print(message)
+                print(type(message))
+                self.packet_handler(message)
             else: # if silent_mode = False
                 event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
@@ -372,9 +377,9 @@ class Node:
                     self.broadcast_all_dios()
                     pass
                 else: # event was a "message in input_msg_queue" event
-                    # HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
+                    # TODO HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
                     print("debug: Node:: packet recieved!")
-                    self.packet_handler()
+                    self.packet_handler(next(iter(event.values())))
                     pass
 
 class Connection:
@@ -459,18 +464,26 @@ class Network:
 
 
         #V2:
-        rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, rpl_instance_id, dodag_id, dodag_version)
-
+        # Check if specified RPL instance/dodag already exists in root node:
+        rpl_instance_idx, dodag_list_idx = find_dodag(root_node.rpl_instances, rpl_instance_id, dodag_id, dodag_version)
         if rpl_instance_idx != None:
-            pass
-            # rpl instance entry found - simply use 
-
-
-
-
+            # RPL instance entry found in root node
+            if dodag_list_idx != dodag_list_idx:
+                print("ERROR: Identical DODAG entry already exists...")
+                raise ValueError 
+            else:
+                # Create DODAG in root node, within the already existing RPL Instance
+                new_dodag = Dodag(dodag_id, dodag_version, rank = 0) # setting rank to 0 makes the node the root!
+                root_node.rpl_instances[rpl_instance_idx].add_dodag(new_dodag)
+        else:
+            # No matching RPL entry exists in root node - create one! (including dodag):
+            new_rpl_instance = Rpl_Instance(rpl_instance_id)
+            new_dodag = Dodag(dodag_id, dodag_version, rank = 0) # setting rank to 0 makes the node the root!
+            new_rpl_instance.add_dodag(new_dodag)
+            root_node.rpl_instances.append(new_rpl_instance)
 
         # initialize dodag formation:
-
+        root_node.broadcast_all_dios()
 
         return root_node.node_id
 
