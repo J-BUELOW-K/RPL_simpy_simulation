@@ -335,12 +335,12 @@ class Node:
                 event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                     # broadcast_dio() # TODO - NODEN SKAL VEL BROADCASTE ALLE DENS DODAGS TIL ALLE DENS CONNECTIONS
-                    print("debug: Node: timeout!")
+                    # print("debug: Node: timeout!") TODO fjerne udkommenteringen
                     self.broadcast_all_dios()
                     pass
                 else: # event was a "message in input_msg_queue" event
                     # TODO HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
-                    print("debug: Node:: packet recieved!")
+                    # print("debug: Node:: packet recieved!") TODO fjerne udkommenteringen
                     self.packet_handler(next(iter(event.values())))
                     pass
 
@@ -478,14 +478,49 @@ class Network:
 
         plt.show()
 
-    def plot_resulting_dodag(self): # input: rpl instance, dodag id og dodag version , rpl_instance_id, dodag_id, dodag_version
+    # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
+    # kræve en del lagerplads.
+
+    #TODO spørg om network version number. Giver ikke rigtig mening
+    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version): # input: rpl instance, dodag id og dodag version  
         #TODO SKAL RENT FAKTISK LAVE ET PLOT 
         for node in self.nodes:
             print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
 
-        for node in self.nodes:
-            print(node.node_id)
+        if len(self.nodes) == 0:
+            raise ValueError("No nodes in network")
+
+        rpl_instances = self.nodes[0].rpl_instances
+        index = find_dodag(rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version) # return index of dodag and/or rpl instance in list of rpl instances
+
+   
+
+            # print(node.rpl_instances[0].dodag_list[0].rank)
         
+        # find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version)
+
+
+
+        # Noter - I et node objekt kan jeg finde de følgdende variabler, objekter og lister:
+        # Node
+        #   env
+        #   node_id
+        #   xpos
+        #   ypos 
+        #   neighbors = []
+
+        #   rpl_instances = [] # list of RPLIncances that the node is a part of (contains all dodags)
+        #       rpl_instance_id
+        #       dodag_list = []
+        #           dodag_id
+        #           dodag_version_num
+        #           prefered_parent
+        #           prefered_parent_rank
+        #           rank
+        #           metric_object
+        #   input_msg_queue
+        #   self.silent_mode
+
 
         # def plot_dodag(): # SKAL NOK VÆRE EN METHOD I DODAG CLASSEN
         # G = nx.DiGraph()

@@ -22,7 +22,7 @@ def main():
     # Execute simulation
     env.run(until=defines.SIM_TIME)
 
-    nw.plot_resulting_dodag()
+    nw.plot_resulting_dodag(123, 123, 123)
     # TODO print dodag her (lav til funktion i netowrk klassen, der hent rank og parent fra alle nodes og plotter dem)
 
     #Vi leder efter Geometric grapghs!
