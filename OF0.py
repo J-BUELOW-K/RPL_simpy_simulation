@@ -11,14 +11,14 @@ from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOU
 # OCP = 0
 
 
-def map_value_to_step_of_rank(value, method:str='linear', min_value:int=0, max_value:float=20240.95, min_step:int=1, max_step:int=9):
-    if method == 'linear':
+def map_value_to_step_of_rank(value:float, method:str='linear', min_value:int=0, max_value:float=20240.95, min_step:int=1, max_step:int=9):
+    if method == 'linear': # linear mapping between value and step_of_rank (value is a float between min_value and max_value)
         return int((value - min_value) / (max_value - min_value) * (max_step - min_step) + min_step)
     
-    elif method == 'log':
+    elif method == 'log': # logarithmic mapping between value and step_of_rank (value is a float between min_value and max_value)
         return int(math.log(value) / math.log(max_value) * (max_step - min_step) + min_step)
     
-    elif method == 'sigmoid':
+    elif method == 'sigmoid': # sigmoid mapping between value and step_of_rank (value is a float between min_value and max_value)
         return int(1 / (1 + math.exp(-value)) * (max_step - min_step) + min_step)
 
 
@@ -26,25 +26,7 @@ def map_value_to_step_of_rank(value, method:str='linear', min_value:int=0, max_v
 def DAGRank(rank):
     return math.floor(float(rank) / defines.DEFAULT_MIN_HOP_RANK_INCREASE) # Returns Interger part of rank. see sec 3.5.1 in RPL standard for more info
 
-# MAX_ETX = network.estimate_etx(defines.RADIUS,'fspl')
 
-
-# class OF0:
-#     def __init__(self, default:bool=True, config_dict:dict=None) -> None:
-#         if default:
-#             self.rank_factor = DEFAULT_RANK_FACTOR
-#             self.stretch_of_rank = DEFAULT_RANK_STRETCH
-#             self.step_of_rank = DEFAULT_STEP_OF_RANK
-#             self.MinHopRankIncrease = 256
-#         else:
-#             self.rank_factor = config_dict["rank_factor"]
-#             self.stretch_of_rank = config_dict["stretch_of_rank"]
-#             self.step_of_rank = config_dict["step_of_rank"]
-#             self.MinHopRankIncrease = config_dict["MinHopRankIncrease"]
-#         pass
-    
-    
-#def of0_compute_rank(dodag, parent_rank, metric_object = None, metric_object_type = None):
 def of0_compute_rank(parent_rank, metric_object = None):  
     # note, metric_object is the full metric_object all the way from the node to the root
     # The step_of_rank Sp that is computed for that link is multiplied by
@@ -57,37 +39,30 @@ def of0_compute_rank(parent_rank, metric_object = None):
 
         # rank_increase = (Rf*Sp + Sr) * MinHopRankIncrease
         
-        #define STEP_OF_RANK(p)       (((3 * parent_link_metric(p)) / LINK_STATS_ETX_DIVISOR) - 2)
-        
-    # if OF0 == 'ETX':
-    #     step_of_rank = (((3 * etx) / LINK_STATS_ETX_DIVISOR) - 2)
-
     # UDREGNE STEP OF RANK. ENTEN VED BRUG AF DEFAULT step_of_rank (hvis der ingen metric object gives), eller "HP" eller "ETX"
+        # måske er https://mailarchive.ietf.org/arch/msg/6tisch/ijlk2XYM6Xz7xQtTB88DMSNjRdw/ brugbar
+        # aka måske Sp = a*ETX + b .
+        # hvor man lige skal tænke over hvad a skal være (ivhertfald noget scalere ETX ned, fordi vores ETX er stor.)
+        # (husk også at step_of_rank skal være et heltal)
     
-    # rank_increase = (DEFAULT_RANK_FACTOR * DEFAULT_STEP_OF_RANK + DEFAULT_RANK_STRETCH) * dodag.MinHopRankIncrease
-    # if parent_rank+rank_increase > INFINITE_RANK:
-    #     return INFINITE_RANK
-    # else:
-    #     return parent_rank+rank_increase
-        
-    
-    if isinstance(metric_object,None):
+    if isinstance(metric_object, None):
         step_of_rank = defines.DEFAULT_STEP_OF_RANK
     elif isinstance(metric_object, HP_OBJ):
         step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//2)) # or 'log' or 'sigmoid'
         pass # TODO map hop count til STEP_OF_RANK mellem 1 og 9 
     elif isinstance(metric_object, ETX_OBJ):
         step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='log') # or 'log' or 'sigmoid'
-        
-
-        # måske er https://mailarchive.ietf.org/arch/msg/6tisch/ijlk2XYM6Xz7xQtTB88DMSNjRdw/ brugbar
-        # aka måske Sp = a*ETX + b .
-        # hvor man lige skal tænke over hvad a skal være (ivhertfald noget scalere ETX ned, fordi vores ETX er stor.)
-        # (husk også at step_of_rank skal være et heltal)
     else:
         raise ValueError("Invalid metric object type")
+    
+    
     rank_increase = (defines.DEFAULT_RANK_FACTOR*step_of_rank) * defines.DEFAULT_MIN_HOP_RANK_INCREASE  
-    return parent_rank + rank_increase    
+    new_rank =  parent_rank + rank_increase
+    
+    if new_rank > defines.INFINITE_RANK:
+        return defines.INFINITE_RANK
+    else:
+        return new_rank    
 
         
 
