@@ -99,7 +99,7 @@ class Node:
         pass
 
     def increment_metric_object_from_neighbor(self, neighbors_metric_object, neighbors_node_id): # helper function used to increment a metric object recieved from a neighbor - to include path from neighbor to this node
-        print(f"debug: nabo objekt:{neighbors_metric_object}")
+        #print(f"debug: nabo objekt:{neighbors_metric_object}")
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_NONE:
             return None
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
@@ -334,8 +334,6 @@ class Node:
             if self.silent_mode == True:
                 message = yield self.input_msg_queue.get()
                 self.silent_mode = False
-                print(message)
-                print(type(message))
                 self.packet_handler(message)
             else: # if silent_mode = False
                 event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
@@ -490,6 +488,10 @@ class Network:
     # kræve en del lagerplads.
 
     def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version): # input: rpl instance, dodag id og dodag version  
+
+        # for node in self.nodes:
+        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
+
         dpi = 200
         fig_width = 10
         fig_height = 10
