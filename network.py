@@ -104,7 +104,7 @@ class Node:
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
             for neighbor in self.neighbors:
                 if neighbor[0].node_id == neighbors_node_id:
-                    neighbors_metric_object.cumulative_hop_count += neighbor[1].etx_value
+                    neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
         return neighbors_metric_object
                     
 
@@ -172,7 +172,7 @@ class Node:
         dodag_reference = intance_reference.dodag_list[dodag_list_idx]
 
 
-        ####################  asdasdasd ####################  
+        ####################  Root does not want a parent  ####################   
         if dodag_reference.rank == defines.ROOT_RANK:
             return
 
