@@ -484,7 +484,7 @@ class Network:
     # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
     # kræve en del lagerplads.
 
-    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, title: str = "Dodag", metadata = None): # input: rpl instance, dodag id og dodag version  
+    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version): # input: rpl instance, dodag id og dodag version  
         dpi = 200
         fig_width = 10
         fig_height = 10
@@ -517,10 +517,7 @@ class Network:
         flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
         nx.draw(G, flipped_pos, with_labels = True, node_size=350)
         
-        metadata = "Dette er en test text!!!"
 
-        if metadata is not None:
-            fig.text(fig_height, fig_width, metadata)
 
         fig.suptitle(title, fontsize=16)
         plt.title("Dodag")
