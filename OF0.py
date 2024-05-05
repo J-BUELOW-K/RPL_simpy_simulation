@@ -1,6 +1,6 @@
 import network
 import math
-
+from control_messages import HP_OBJ, ETX_OBJ
 from dodag import Dodag
 import defines
 from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX
@@ -71,20 +71,22 @@ def of0_compute_rank(parent_rank, metric_object = None):
     #     return parent_rank+rank_increase
         
     
-    if METRIC_OBJECT_TYPE == METRIC_OBJECT_NONE:
-        pass # TODO BRUG KUN DEFAULT VÆRDIER
-        rank_increase = (defines.DEFAULT_RANK_FACTOR*defines.DEFAULT_STEP_OF_RANK) * defines.DEFAULT_MIN_HOP_RANK_INCREASE
-    elif METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+    if isinstance(metric_object,None):
+        step_of_rank = defines.DEFAULT_STEP_OF_RANK
+    elif isinstance(metric_object, HP_OBJ):
+        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//2)) # or 'log' or 'sigmoid'
         pass # TODO map hop count til STEP_OF_RANK mellem 1 og 9 
-    elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
-        pass # TODO map ETX til STEP_OF_RANK mellem 1 og 9
+    elif isinstance(metric_object, ETX_OBJ):
+        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='log') # or 'log' or 'sigmoid'
+        
+
         # måske er https://mailarchive.ietf.org/arch/msg/6tisch/ijlk2XYM6Xz7xQtTB88DMSNjRdw/ brugbar
         # aka måske Sp = a*ETX + b .
         # hvor man lige skal tænke over hvad a skal være (ivhertfald noget scalere ETX ned, fordi vores ETX er stor.)
         # (husk også at step_of_rank skal være et heltal)
     else:
-        pass # TODO lav error med invalid param
-
+        raise ValueError("Invalid metric object type")
+    rank_increase = (defines.DEFAULT_RANK_FACTOR*step_of_rank) * defines.DEFAULT_MIN_HOP_RANK_INCREASE  
     return parent_rank + rank_increase    
 
         
