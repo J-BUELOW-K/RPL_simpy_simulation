@@ -32,6 +32,8 @@ class Dodag:
             self.metric_object = control_messages.HP_OBJ(0) # Init hopcount to 0
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
             self.metric_object = control_messages.ETX_OBJ(0) # Init ETX to 0
+            
+        self.surrounding_dodags = {} # dict of dodag_ids of surrounding dodags and their timestamps
 
         # TODO der skal måske være noget herinde til at holde alt dodag info fra de andre nodes (info man får i DIO beskederne)(en liste)
 
