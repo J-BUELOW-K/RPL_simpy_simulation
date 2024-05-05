@@ -484,8 +484,11 @@ class Network:
     # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
     # kræve en del lagerplads.
 
-    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version): # input: rpl instance, dodag id og dodag version  
-        #TODO SKAL RENT FAKTISK LAVE ET PLOT 
+    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, title: str = "Dodag", metadata = None): # input: rpl instance, dodag id og dodag version  
+        dpi = 200
+        fig_width = 10
+        fig_height = 10
+        fig = plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
 
         if len(self.nodes) == 0:
             raise ValueError("No nodes in network")
@@ -498,17 +501,30 @@ class Network:
         if (rpl_instance_idx == None) or (dodag_list_idx == None):
             raise ValueError("No Dodag to print with the provided IDs and version.")
         
+        # Sort the list of node objects into numerical order for the nodes' ranks. 
         sorted_nodes = sorted(self.nodes, key=lambda node: node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
 
+        # set up a list containing all edges.
         edges = []
         for node in sorted_nodes[1:]:
             child = node.node_id
             parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
             edges.append((child, parent))
 
+        # plot the DODAG using networkx and graphviz
         G = nx.DiGraph(edges,)
         pos = graphviz_layout(G, prog="dot")
         flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
         nx.draw(G, flipped_pos, with_labels = True, node_size=350)
+        
+        metadata = "Dette er en test text!!!"
+
+        if metadata is not None:
+            fig.text(fig_height, fig_width, metadata)
+
+        fig.suptitle(title, fontsize=16)
+        plt.title("Dodag")
+        plt.savefig("Graph.jpg", format="JPG", dpi=dpi)
         plt.show()
+
         
