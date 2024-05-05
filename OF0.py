@@ -88,9 +88,6 @@ def of0_compare_parent(current_parent_rank, challenger_parent_rank,
     else:
         return "keep parent", rank_through_current_parent
 
-
-    else:
-        return "keep parent", DAGRank(rank_through_current_parent) 
     #TODO: return "keep parent" or "update parent" depending on which parent is better (based on rank)
     
     

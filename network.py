@@ -346,13 +346,14 @@ class Node:
                     # broadcast_dio() # TODO - NODEN SKAL VEL BROADCASTE ALLE DENS DODAGS TIL ALLE DENS CONNECTIONS
                     # print("debug: Node: timeout!") TODO fjerne udkommenteringen
                     self.broadcast_all_dios()
+                    
                     pass
                 else: # event was a "message in input_msg_queue" event
                     # TODO HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
                     # print("debug: Node:: packet recieved!") TODO fjerne udkommenteringen
                     self.packet_handler(next(iter(event.values())))
                     pass
-           # self.network.plot_resulting_dodag()
+            
 
 class Connection:
     def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
@@ -493,7 +494,7 @@ class Network:
     # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
     # kræve en del lagerplads.
 
-    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version): # input: rpl instance, dodag id og dodag version  
+    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr=""): # input: rpl instance, dodag id og dodag version  
 
         # for node in self.nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
@@ -515,7 +516,12 @@ class Network:
             raise ValueError("No Dodag to print with the provided IDs and version.")
         
         # Sort the list of node objects into numerical order for the nodes' ranks. 
-        sorted_nodes = sorted(self.nodes, key=lambda node: node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
+        try:
+            sorted_nodes = sorted(self.nodes, key=lambda node: node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
+        except IndexError:
+            print(f"rpl_instance_idx: {rpl_instance_idx}, dodag_list_idx: {dodag_list_idx}")
+            sorted_nodes = self.nodes # if the nodes are not sorted, just use the original list
+            pass
 
         # set up a list containing all edges.
         edges = []
@@ -532,7 +538,15 @@ class Network:
         
         
         plt.title("Dodag")
-        plt.savefig("Graph.jpg", format="JPG", dpi=dpi)
-        plt.show()
+        plt.savefig(f"Graph{nr}.jpg", format="JPG", dpi=dpi)
+        if nr == "":
+            plt.show()
+        else:
+            plt.close()
 
-   
+    def at_interval_plot(self, interval):
+        idx = 0
+        while True:
+            yield self.env.timeout(interval)
+            self.plot_resulting_dodag(123,123,123, idx)
+            idx += 1
