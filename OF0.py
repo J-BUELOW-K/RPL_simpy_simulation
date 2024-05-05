@@ -11,7 +11,7 @@ from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOU
 # OCP = 0
 
 
-def map_value_to_step_of_rank(value:float, method:str='linear', min_value:int=0, max_value:float=20240.95, min_step:int=1, max_step:int=9):
+def map_value_to_step_of_rank(value:float, method:str='linear', min_value:int=0, max_value:float=60000, min_step:int=1, max_step:int=9):
     if method == 'linear': # linear mapping between value and step_of_rank (value is a float between min_value and max_value)
         return int((value - min_value) / (max_value - min_value) * (max_step - min_step) + min_step)
     
@@ -53,7 +53,8 @@ def of0_compute_rank(parent_rank, metric_object = None):
         step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//2)) # or 'log' or 'sigmoid'
         pass # TODO map hop count til STEP_OF_RANK mellem 1 og 9 
     elif isinstance(metric_object, ETX_OBJ):
-        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='log') # or 'log' or 'sigmoid'
+        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='linear') # or 'log' or 'sigmoid'
+        #print("debug hejsa3")
     else:
         raise ValueError("Invalid metric object type")
     
