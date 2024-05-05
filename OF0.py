@@ -10,6 +10,19 @@ from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOU
 # # Objective Code Point
 # OCP = 0
 
+
+def map_value_to_step_of_rank(value, method:str='linear', min_value:int=0, max_value:float=20240.95, min_step:int=1, max_step:int=9):
+    if method == 'linear':
+        return int((value - min_value) / (max_value - min_value) * (max_step - min_step) + min_step)
+    
+    elif method == 'log':
+        return int(math.log(value) / math.log(max_value) * (max_step - min_step) + min_step)
+    
+    elif method == 'sigmoid':
+        return int(1 / (1 + math.exp(-value)) * (max_step - min_step) + min_step)
+
+
+
 def DAGRank(rank):
     return math.floor(float(rank) / defines.DEFAULT_MIN_HOP_RANK_INCREASE) # Returns Interger part of rank. see sec 3.5.1 in RPL standard for more info
 
