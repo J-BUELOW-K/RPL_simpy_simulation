@@ -44,23 +44,21 @@ def of0_compute_rank(parent_rank, metric_object = None):
         # aka måske Sp = a*ETX + b .
         # hvor man lige skal tænke over hvad a skal være (ivhertfald noget scalere ETX ned, fordi vores ETX er stor.)
         # (husk også at step_of_rank skal være et heltal) 
-    #print(f"debug mumsi {metric_object.cumulative_hop_count}")
+        
+    
+
     if metric_object is None:
         step_of_rank = defines.DEFAULT_STEP_OF_RANK
-        #print("debug hejsa")
     elif isinstance(metric_object, HP_OBJ):
         step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//2)) # or 'log' or 'sigmoid'
-        #print("debug hejsa2")
         pass # TODO map hop count til STEP_OF_RANK mellem 1 og 9 
     elif isinstance(metric_object, ETX_OBJ):
         step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='log') # or 'log' or 'sigmoid'
-        #print("debug hejsa3")
     else:
         raise ValueError("Invalid metric object type")
     
-    print(f"step_of_rank: {step_of_rank}")
     
-    rank_increase = (defines.DEFAULT_RANK_FACTOR*step_of_rank) * defines.DEFAULT_MIN_HOP_RANK_INCREASE  
+    rank_increase = (defines.DEFAULT_RANK_FACTOR*step_of_rank + defines.DEFAULT_RANK_STRETCH) * defines.DEFAULT_MIN_HOP_RANK_INCREASE  
     new_rank =  parent_rank + rank_increase
     
     if new_rank > defines.INFINITE_RANK:
