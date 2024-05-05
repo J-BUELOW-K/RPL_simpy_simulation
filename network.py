@@ -507,6 +507,9 @@ class Network:
         # for node in sorted_nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
 
+        for node in sorted_nodes:
+            child = node.node_id
+            parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
 
         dodag = rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx]
 
