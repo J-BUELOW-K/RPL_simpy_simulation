@@ -76,7 +76,8 @@ def of0_compute_rank(parent_rank, metric_object = None):
 
     
 #def of0_compare_parent(current_parent: Node, challenger_parent: Node, ICMP_DIO, metric_object_to_challenger = None, metric_object_type = None):
-def of0_compare_parent(current_parent_rank, challenger_parent_rank, metric_object_through_current_parrent = None, metric_object_through_challenger = None):
+def of0_compare_parent(current_parent_rank, challenger_parent_rank,
+                       metric_object_through_current_parrent = None, metric_object_through_challenger = None):
     # note, "parent" in parameter names means "prefered parent"
 
 
@@ -85,74 +86,15 @@ def of0_compare_parent(current_parent_rank, challenger_parent_rank, metric_objec
 
     if DAGRank(rank_through_challenger_parent) < DAGRank(rank_through_current_parent):    # only choose challenger parent as new prefered parent IF it results in a better DAGRank (if equal, keep current parent)
         # note, DAGRank() is used when comparing ranks (see RPL standard)
-        return "update parent", DAGRank(rank_through_challenger_parent)
-    else:
+        return "update parent", DAGRank(rank_through_challenger_parent) 
+    
+    elif DAGRank(rank_through_challenger_parent) >= DAGRank(rank_through_current_parent): # step 8 in RFC 6552
         return "keep parent", DAGRank(rank_through_current_parent)
 
-    # rank1 = of0_compute_rank(parent_1.dodag, parent_1.dodag.rank)
-    # rank2 = of0_compute_rank(parent_2.dodag, parent_2.dodag.rank)
 
-
-
-    
-    # if (parent_1.dodag.DAGRank(rank1) != parent_2.dodag.DAGRank(rank2)): # step 8 in RFC 6552
-    #     return rank1 - rank2
-    
-    # # a preferred parent should stay preferred. Step 10 in RFC 6552
-    # if parent_1.preferred:
-    #     return -1
-
-    # if parent_2.preferred:
-    #     return 1
-    
-    # router that has announced a DIO message more recently should be
-    # preferred
-    #return parent_2.dodag.last_dio - parent_1.dodag.last_dio # step 11 in RFC 6552
-    ...
-        
-
-
-
-
-
-
-
-
-
-
-
-
-# def of0_compute_preferred_parent(dodag, neighbors:list):
-    
-#     # The parent that is selected as the preferred parent is the one that has the lowest rank among all the neighbors that have been heard within the last DIOInterval.
-#     for neighbor in neighbors:
-#         out = []
-#         for i in range(1, len(neighbors)):
-#             out.append(of0_compare_parent(neighbor, neighbors[i]))
-
-# class node_tester():
-    
-#     def __init__(self, dodag) -> None:
-#         self.dodag = dodag
-#         self.preferred = False
-#         self.rank = 0
-#         self.G = False
-#         self.Prf = 0
-#         self.last_dio = 0
-    
-# if __name__ == "__main__":
+    else:
+        return "keep parent", DAGRank(rank_through_current_parent) 
+    #TODO: return "keep parent" or "update parent" depending on which parent is better (based on rank)
     
     
-#     d1 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
-#     n1 = node_tester(d1)
-#     d2 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
-#     n2 = node_tester(d2)
-#     d3 = Dodag(dodag_id=1, dodag_version_num=1, is_root=False)
-#     n3 = node_tester(d3)
-    
-    
-#     n1_neighbors = [n2, n3]
-
-    
-#     of0_compute_preferred_parent(n1, n1_neighbors)
     
