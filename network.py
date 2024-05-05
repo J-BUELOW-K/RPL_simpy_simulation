@@ -49,6 +49,7 @@ def find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version): #
         if rpl_instances[i].rpl_instance_id == rpl_instance_id:
             #print("debug: matching RPL Instance entry found!")
             rpl_instance_idx = i
+            break
 
     if rpl_instance_idx != None: # If there exists an entry for the recieved RPL instance in self.rpl_instances!
         # Find associated Dodag:
@@ -57,6 +58,7 @@ def find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version): #
             if temp_dodag.dodag_id == dodag_id and temp_dodag.dodag_version_num == dodag_version: # Both ID and Version has to match!
                 #print("debug: matching dodag entry found!")
                 dodag_list_idx = i
+                break
 
     return rpl_instance_idx, dodag_list_idx
 
@@ -484,17 +486,36 @@ class Network:
     #TODO spørg om network version number. Giver ikke rigtig mening
     def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version): # input: rpl instance, dodag id og dodag version  
         #TODO SKAL RENT FAKTISK LAVE ET PLOT 
-        for node in self.nodes:
-            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
 
         if len(self.nodes) == 0:
             raise ValueError("No nodes in network")
-
+        
+        # TODO det her virker lidt som en forkert måde at gøre det her på, men det er den eneste måde jeg lige kunne komme på.
+        # problemet: Jeg finder og bruger indexer for rpl og dodag listerne baserede på 1 node som er hard coded og brugt til alle.
         rpl_instances = self.nodes[0].rpl_instances
-        index = find_dodag(rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version) # return index of dodag and/or rpl instance in list of rpl instances
+        rpl_instance_idx, dodag_list_idx = find_dodag(rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version) # return index of dodag and/or rpl instance in list of rpl instances
 
-   
+        if (rpl_instance_idx == None) or (dodag_list_idx == None):
+            raise ValueError("No Dodag to print with the provided IDs and version.")
+        
 
+        # for node in self.nodes:
+        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
+
+        sorted_nodes = sorted(self.nodes, key=lambda node: node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
+
+        # for node in sorted_nodes:
+        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
+
+
+        dodag = rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx]
+
+
+        
+
+        
+        
+        
             # print(node.rpl_instances[0].dodag_list[0].rank)
         
         # find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version)
