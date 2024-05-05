@@ -507,15 +507,43 @@ class Network:
         # for node in sorted_nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
 
-        for node in sorted_nodes:
+        edges = []
+        for node in sorted_nodes[1:]:
             child = node.node_id
             parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
+            # print("Node ", child, " ==> ", "Node ", parent)
+            edges.append((child, parent))
 
-        dodag = rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx]
+        layers = []
+        ranks = sorted(set([node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank for node in sorted_nodes]))
 
+        # print(ranks)
 
+        for rank in ranks:
+            dict_name = str(rank)
+            # indices = [i for i, x in enumerate(ranks) if x == rank]
+            # print(dict_name, ": ", indices)
+            list_of_node_ids = []
+            for node in sorted_nodes:
+                if node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank == rank:
+                    list_of_node_ids.append(node.node_id)
+            
+            layers.append((dict_name, list_of_node_ids))
+
+        layers = dict(layers)
+
+        # print(layers)
+        G = nx.DiGraph(edges)
+        pos = nx.multipartite_layout(G, subset_key=layers, align="horizontal") 
+
+        # Flips the tree structure on the horizontal axis
+        # for i in range(0, len(pos)):     
+        #     pos[i][1] *= -1
+
+        nx.draw(G,pos=pos,with_labels=True)
+        plt.show()
         
-
+        
         
         
         
@@ -546,35 +574,14 @@ class Network:
         #   self.silent_mode
 
 
-        # def plot_dodag(): # SKAL NOK VÆRE EN METHOD I DODAG CLASSEN
+    
         # G = nx.DiGraph()
-        # #G.add_node(1)
-        # #G.add_node("davs")
-        # # #G.add_node(3)
-        # # G.add_edge(1,2)
-        # # #G.add_edge(2,3)
-        # # G.add_edge(3,2)
-        # # G.add_edge(3,3)
+        
 
-        # G.add_node(1)
-        # G.add_node(2)
-        # G.add_node(3)
-        # G.add_node(4)
-        # G.add_node(5)
+       
+       
 
-        # G.add_edge(1,2)
-        # G.add_edge(2,3)
-        # G.add_edge(5,1)
-        # G.add_edge(4,2)
 
-        # G_triangle = nx.DiGraph([(2, 1), (3, 1), (4, 1), (5,2)])
-
-        # #G = nx.petersen_graph()
-        # #subax1 = plt.subplot(121)
-        # #subax1 = plt.subplot(121)
-        # #nx.draw(G,with_labels=True)
-        # #nx.draw_planar(G_triangle,with_labels=True)
-        # #nx.draw(G_triangle,pos=nx.multipartite_layout(G_triangle),with_labels=True)
         # G = nx.DiGraph([(1, 0), (2, 0), (3, 0), (4, 2),(5, 3)])
         # layers = {"b": [4,5], "c": [1,2,3], "d": [0]}  #når jeg skal gøre det automatisk. start med tomt array. så bare brug rank til at start fra bunden og op, hvor jeg appender hver lag
         # pooos = nx.multipartite_layout(G, subset_key=layers, align="horizontal")
