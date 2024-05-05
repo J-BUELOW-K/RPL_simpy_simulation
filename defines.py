@@ -37,5 +37,5 @@ DEFAULT_MIN_HOP_RANK_INCREASE = 256 # (defined in sec 18.2.8 in rfc6550)
 METRIC_OBJECT_NONE = 0
 METRIC_OBJECT_HOPCOUNT = 1
 METRIC_OBJECT_ETX = 2
-METRIC_OBJECT_TYPE = METRIC_OBJECT_NONE # This is the metric object that the simulation will use - choose either of the above
+METRIC_OBJECT_TYPE = METRIC_OBJECT_HOPCOUNT # This is the metric object that the simulation will use - choose either of the above
 

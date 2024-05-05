@@ -1,4 +1,5 @@
 import simpy
+import copy
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -52,7 +53,7 @@ def find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version): #
             rpl_instance_idx = i
             break
 
-    if rpl_instance_idx != None: # If there exists an entry for the recieved RPL instance in self.rpl_instances!
+    if rpl_instance_idx is not None: # If there exists an entry for the recieved RPL instance in self.rpl_instances!
         # Find associated Dodag:
         for i in range(len(rpl_instances[rpl_instance_idx].dodag_list)):
             temp_dodag = rpl_instances[rpl_instance_idx].dodag_list[i]
@@ -98,6 +99,7 @@ class Node:
         pass
 
     def increment_metric_object_from_neighbor(self, neighbors_metric_object, neighbors_node_id): # helper function used to increment a metric object recieved from a neighbor - to include path from neighbor to this node
+        print(f"debug: nabo objekt:{neighbors_metric_object}")
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_NONE:
             return None
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
@@ -105,7 +107,7 @@ class Node:
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
             for neighbor in self.neighbors:
                 if neighbor[0].node_id == neighbors_node_id:
-                    neighbors_metric_object.cumulative_hop_count += neighbor[1].etx_value
+                    neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
         return neighbors_metric_object
                     
 
@@ -123,10 +125,10 @@ class Node:
 
         icmp_dio = ICMP_DIO(rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
-            #icmp_dio.add_HP_metric() # TODO (mangler input)
+            icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
             pass
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
-            #icmp_dio.add_ETX_metric() # TODO (mangler input)
+            icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
             pass
         packet = Packet(self.node_id, icmp_dio)
         self.broadcast_packet(packet)
@@ -155,7 +157,7 @@ class Node:
                                                       dio_message.dodag_id, dio_message.vers)
         if rpl_instance_idx == None:
             # No entry in self.rpl_instaces for recieved RPL instance! Create one!
-            dodag_object = Dodag(dio_message.dodag_id, dio_message.vers)
+            dodag_object = Dodag(env=self.env, dodag_id=dio_message.dodag_id, dodag_version_num=dio_message.vers)
             rpl_instance_obj = Rpl_Instance(dio_message.rpl_instance_id)
             rpl_instance_obj.add_dodag(dodag_object)
             self.rpl_instances.append(rpl_instance_obj)
@@ -165,7 +167,7 @@ class Node:
             # There exists an entry for the recieved RPL instance in self.rpl_instances!
             if dodag_list_idx == None:
                 # No existing DODAG entry in the RPL Instance! Create one!
-                dodag_object = Dodag(dio_message.dodag_id, dio_message.version)
+                dodag_object = Dodag(env=self.env, dodag_id=dio_message.dodag_id, dodag_version_num=dio_message.version)
                 self.rpl_instances[rpl_instance_idx].add_dodag(dodag_object)
                 dodag_list_idx = len(self.rpl_instances[rpl_instance_idx].dodag_list) - 1 # value is always just 0
 
@@ -173,14 +175,15 @@ class Node:
         dodag_reference = intance_reference.dodag_list[dodag_list_idx]
 
 
-        ####################  asdasdasd ####################  
+        ####################  Root does not want a parent  ####################   
         if dodag_reference.rank == defines.ROOT_RANK:
             return
 
 
         ####################  CHECK IF SENDER IS A BETTER PREFERRED PARENT THAN THE CURRENT PREFERRED PARRENT - UPDATE STUFF IF IT IS ####################
 
-        metric_object_through_neighbor = self.increment_metric_object_from_neighbor(senders_metric_object, senders_node_id)
+        senders_metric_object_copy = copy.deepcopy(senders_metric_object) # create copy to not alter the original.
+        metric_object_through_neighbor = self.increment_metric_object_from_neighbor(senders_metric_object_copy, senders_node_id) 
 
         if dodag_reference.prefered_parent == None: # Our node does not have a prefered parent - we simply accept the DIO sender as prefered parent
             dodag_reference.prefered_parent = senders_node_id
@@ -409,6 +412,7 @@ class Network:
             root_node = self.nodes[desired_root_node_id] # assumption: index in self.nodes array matches node_id
 
         
+        
 
         # # Check if specified RPL instance already exists:
         # for instance in root_node.rpl_instances:
@@ -438,12 +442,12 @@ class Network:
                 raise ValueError 
             else:
                 # Create DODAG in root node, within the already existing RPL Instance
-                new_dodag = Dodag(dodag_id, dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
+                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=defines.ROOT_RANK) # setting rank to 0 makes the node the root!
                 root_node.rpl_instances[rpl_instance_idx].add_dodag(new_dodag)
         else:
             # No matching RPL entry exists in root node - create one! (including dodag):
             new_rpl_instance = Rpl_Instance(rpl_instance_id)
-            new_dodag = Dodag(dodag_id, dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
+            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
             new_rpl_instance.add_dodag(new_dodag)
             root_node.rpl_instances.append(new_rpl_instance)
 
@@ -480,6 +484,7 @@ class Network:
         # nx.draw_networkx_edge_labels(self.networkx_graph, pos, edge_labels=etx_labels, font_size = 6)#verticalalignment="baseline")
 
         plt.show()
+
 
     # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
     # kræve en del lagerplads.
@@ -524,4 +529,4 @@ class Network:
         plt.savefig("Graph.jpg", format="JPG", dpi=dpi)
         plt.show()
 
-        
+   
