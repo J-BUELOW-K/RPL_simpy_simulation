@@ -75,9 +75,10 @@ class Node:
     #    hmm... men i Process Communication example yielder de ikke på put. det kommer nok an på om man vil sidde stuck indtil den er sendt, eller bare komme videre idk
     # Problem. hvordan tingår en node andre nodes input queues. er det ikke kun noget netwærk objektet kan?? tænk over det
 
-    def __init__(self, env, node_id, xpos, ypos):
+    def __init__(self, env, nw, node_id, xpos, ypos):
 
         # Physical network values:
+        self.network = nw
         self.env = env
         self.node_id = node_id
         self.xpos = xpos  # used to estimate ETX
@@ -152,17 +153,17 @@ class Node:
         # V2:
         rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, dio_message.rpl_instance_id, \
                                                       dio_message.dodag_id, dio_message.vers)
-        if rpl_instance_idx == None:
+        if rpl_instance_idx is None:
             # No entry in self.rpl_instaces for recieved RPL instance! Create one!
             dodag_object = Dodag(env=self.env, dodag_id=dio_message.dodag_id, dodag_version_num=dio_message.vers)
             rpl_instance_obj = Rpl_Instance(dio_message.rpl_instance_id)
             rpl_instance_obj.add_dodag(dodag_object)
             self.rpl_instances.append(rpl_instance_obj)
             rpl_instance_idx = len(self.rpl_instances) - 1 # there might already be entries for other instances in the self.rpl_instaces list
-            dodag_list_idx = len(rpl_instance_obj.dodag_list) - 1  # value is always just 0
+            dodag_list_idx = len(rpl_instance_obj.dodag_list) - 1  # value is always just 0 if onlhy one dodag in the list
         else:
             # There exists an entry for the recieved RPL instance in self.rpl_instances!
-            if dodag_list_idx == None:
+            if dodag_list_idx is None:
                 # No existing DODAG entry in the RPL Instance! Create one!
                 dodag_object = Dodag(env=self.env, dodag_id=dio_message.dodag_id, dodag_version_num=dio_message.version)
                 self.rpl_instances[rpl_instance_idx].add_dodag(dodag_object)
@@ -170,7 +171,11 @@ class Node:
 
         intance_reference = self.rpl_instances[rpl_instance_idx]
         dodag_reference = intance_reference.dodag_list[dodag_list_idx]
-
+        
+        dodag_reference.last_dio = self.env.now # update timestamp for the recieved dodag (used in OF0)
+        
+        dodag_reference.surrounding_dodags.update({senders_node_id: self.env.now}) # update timestamp for the recieved dodag
+        print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")
 
         ####################  Root does not want a parent  ####################   
         if dodag_reference.rank == defines.ROOT_RANK:
@@ -182,7 +187,7 @@ class Node:
         senders_metric_object_copy = copy.deepcopy(senders_metric_object) # create copy to not alter the original.
         metric_object_through_neighbor = self.increment_metric_object_from_neighbor(senders_metric_object_copy, senders_node_id) 
 
-        if dodag_reference.prefered_parent == None: # Our node does not have a prefered parent - we simply accept the DIO sender as prefered parent
+        if dodag_reference.prefered_parent is None: # Our node does not have a prefered parent - we simply accept the DIO sender as prefered parent
             dodag_reference.prefered_parent = senders_node_id
             dodag_reference.prefered_parent_rank = dio_message.rank
             dodag_reference.metric_object = metric_object_through_neighbor # update metric object
@@ -190,7 +195,7 @@ class Node:
         else:
             # test if sender is a better prefered parrent than current prefered parrent:
             #if of0_compare_parent(asdasd) == 1: # if sender is better parent
-            result, winner_rank = of0_compare_parent(dodag_reference.prefered_parent_rank, dio_message.rank, \
+            result, winner_rank = of0_compare_parent(dodag_reference.prefered_parent_rank, dio_message.rank,
                                                      dodag_reference.metric_object, metric_object_through_neighbor)
             if result =="update parent":
                 # we found a better preferred parent!
@@ -346,6 +351,7 @@ class Node:
                     print("debug: Node:: packet recieved!")
                     self.packet_handler(next(iter(event.values())))
                     pass
+           # self.network.plot_resulting_dodag()
 
 class Connection:
     def __init__(self, from_node, to_node, etx_value = MAX_ETX, distance = MAX_DISTANCE):
@@ -375,7 +381,7 @@ class Network:
         self.connections = [Connection(x[0],x[1]) for x in self.networkx_graph.edges()]
         # self.nodes = [Node(node_id = x) for x in self.networkx_graph.nodes()] # does not include position
         for node in self.networkx_graph.nodes(data="pos"):
-            self.nodes.append(Node(self.env, node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
+            self.nodes.append(Node(self.env, self, node_id = node[0], xpos = node[1][0], ypos = node[1][1]))  # node format from networkx: (id, [xpos, ypos])
                                                                                               # note: node_id matches index in self.nodes array!
             #print(f"xpos: {node[1][0]}, ypos: {node[1][1]}")
 
