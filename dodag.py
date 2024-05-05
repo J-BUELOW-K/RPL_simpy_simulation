@@ -16,11 +16,12 @@ from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOU
 
 class Dodag:
 
-    def __init__(self, dodag_id, dodag_version_num, rank = defines.INFINITE_RANK):  # , MinHopRankIncrease = 256.0):
+    def __init__(self, env:object, dodag_id, dodag_version_num, rank = defines.INFINITE_RANK):  # , MinHopRankIncrease = 256.0):
         self.dodag_id = dodag_id # 0
+        self.env = env
         self.dodag_version_num = dodag_version_num # 0
         #self.MinHopRankIncrease = MinHopRankIncrease # 256.0
-        # self.last_dio = time.time() # TODO skal være en timestamp. DET SKAL NOK VÆRE EN SIMPY TIME! IKKE "time" TIME env.now er en ting
+        self.last_dio = self.env.now # TODO skal være en timestamp. DET SKAL NOK VÆRE EN SIMPY TIME! IKKE "time" TIME env.now er en ting
         self.prefered_parent = None # node_id of prefered parent
         self.prefered_parent_rank = defines.INFINITE_RANK
 
