@@ -484,7 +484,6 @@ class Network:
     # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
     # kræve en del lagerplads.
 
-    #TODO spørg om network version number. Giver ikke rigtig mening
     def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version): # input: rpl instance, dodag id og dodag version  
         #TODO SKAL RENT FAKTISK LAVE ET PLOT 
 
@@ -499,105 +498,17 @@ class Network:
         if (rpl_instance_idx == None) or (dodag_list_idx == None):
             raise ValueError("No Dodag to print with the provided IDs and version.")
         
-
-        # for node in self.nodes:
-        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
-
         sorted_nodes = sorted(self.nodes, key=lambda node: node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
-
-        # for node in sorted_nodes:
-        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
 
         edges = []
         for node in sorted_nodes[1:]:
             child = node.node_id
             parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
-            # print("Node ", child, " ==> ", "Node ", parent)
             edges.append((child, parent))
 
-        layers = []
-        ranks = sorted(set([node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank for node in sorted_nodes]))
-
-        # print(self.nodes.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
-
-        for rank in ranks:
-            dict_name = str(DAGRank(rank)/3)
-            # indices = [i for i, x in enumerate(ranks) if x == rank]
-            # print(dict_name, ": ", indices)
-            list_of_node_ids = []
-            for node in sorted_nodes:
-                if node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank == rank:
-                    list_of_node_ids.append(node.node_id)
-            
-            layers.append((dict_name, list_of_node_ids))
-
-        layers = dict(layers)
-
-        # print(layers)
-        # G = nx.DiGraph(edges)
-
-
-        # pos = nx.spring_layout(G)
-        # pos = nx.multipartite_layout(G, subset_key=layers, align="horizontal") 
-
-        # Flips the tree structure on the horizontal axis
-        # for i in range(0, len(pos)):     
-        #     pos[i][1] *= -1
-
-        # nx.draw(G, pos=nx.planar_layout(G), with_labels=True)
-        # nx.draw(G,pos=pos,with_labels=True)
-        # plt.show()
-        
-
-        G = nx.DiGraph(edges)
+        G = nx.DiGraph(edges,)
         pos = graphviz_layout(G, prog="dot")
-        print(layers)
-        nx.draw(G, pos, with_labels = True, node_size=80)
+        flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
+        nx.draw(G, flipped_pos, with_labels = True, node_size=350)
         plt.show()
         
-        
-        
-            # print(node.rpl_instances[0].dodag_list[0].rank)
-        
-        # find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version)
-
-
-
-        # Noter - I et node objekt kan jeg finde de følgdende variabler, objekter og lister:
-        # Node
-        #   env
-        #   node_id
-        #   xpos
-        #   ypos 
-        #   neighbors = []
-
-        #   rpl_instances = [] # list of RPLIncances that the node is a part of (contains all dodags)
-        #       rpl_instance_id
-        #       dodag_list = []
-        #           dodag_id
-        #           dodag_version_num
-        #           prefered_parent
-        #           prefered_parent_rank
-        #           rank
-        #           metric_object
-        #   input_msg_queue
-        #   self.silent_mode
-
-
-    
-        # G = nx.DiGraph()
-        
-
-       
-       
-
-
-        # G = nx.DiGraph([(1, 0), (2, 0), (3, 0), (4, 2),(5, 3)])
-        # layers = {"b": [4,5], "c": [1,2,3], "d": [0]}  #når jeg skal gøre det automatisk. start med tomt array. så bare brug rank til at start fra bunden og op, hvor jeg appender hver lag
-        # pooos = nx.multipartite_layout(G, subset_key=layers, align="horizontal")
-        # nx.draw(G,pos=pooos,with_labels=True)
-
-        # # ER RET SIKKER PÅ VI SKAL BRUGE intergar part of rank (aka dag_rank_macro()) når vi plotter!!!!! Ikke den fulde float rank!
-
-        # #VI SKAL NOK BRUGE DRAW MED POS = multipartite_layout() TIL AT TEGNE DAGS https://networkx.org/documentation/stable/auto_examples/graph/plot_dag_layout.html
-        # plt.show()
