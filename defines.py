@@ -10,7 +10,7 @@ TYPE_RPL_CONTOL_MSG = 155
 
 """Network defines"""
 SIM_TIME = 500
-NUMBER_OF_NODES = 10
+NUMBER_OF_NODES = 1000
 RADIUS = 0.2
 
 NODE_TRANSMIT_TIMER = 5 # Periodic transmit timer - in simpy time units

@@ -1,7 +1,6 @@
 import simpy
 
 import networkx as nx
-import graphviz
 import matplotlib.pyplot as plt
 import math
 from dodag import Rpl_Instance, Dodag
@@ -9,6 +8,7 @@ from control_messages import *
 from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
 import defines
 from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX, NODE_TRANSMIT_TIMER
+from networkx.drawing.nx_agraph import graphviz_layout
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
@@ -533,11 +533,11 @@ class Network:
 
         layers = dict(layers)
 
-        print(layers)
-        G = nx.DiGraph(edges)
+        # print(layers)
+        # G = nx.DiGraph(edges)
 
 
-        pos = nx.spring_layout(G)
+        # pos = nx.spring_layout(G)
         # pos = nx.multipartite_layout(G, subset_key=layers, align="horizontal") 
 
         # Flips the tree structure on the horizontal axis
@@ -545,10 +545,15 @@ class Network:
         #     pos[i][1] *= -1
 
         # nx.draw(G, pos=nx.planar_layout(G), with_labels=True)
-        nx.draw(G,pos=pos,with_labels=True)
+        # nx.draw(G,pos=pos,with_labels=True)
+        # plt.show()
+        
+
+        G = nx.DiGraph(edges)
+        pos = graphviz_layout(G, prog="dot")
+        print(layers)
+        nx.draw(G, pos, with_labels = True, node_size=80)
         plt.show()
-        
-        
         
         
         
