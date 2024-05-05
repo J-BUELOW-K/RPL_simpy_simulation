@@ -1,6 +1,7 @@
 import simpy
 
 import networkx as nx
+import graphviz
 import matplotlib.pyplot as plt
 import math
 from dodag import Rpl_Instance, Dodag
@@ -517,10 +518,10 @@ class Network:
         layers = []
         ranks = sorted(set([node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank for node in sorted_nodes]))
 
-        # print(ranks)
+        # print(self.nodes.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
 
         for rank in ranks:
-            dict_name = str(rank)
+            dict_name = str(DAGRank(rank)/3)
             # indices = [i for i, x in enumerate(ranks) if x == rank]
             # print(dict_name, ": ", indices)
             list_of_node_ids = []
@@ -532,14 +533,18 @@ class Network:
 
         layers = dict(layers)
 
-        # print(layers)
+        print(layers)
         G = nx.DiGraph(edges)
-        pos = nx.multipartite_layout(G, subset_key=layers, align="horizontal") 
+
+
+        pos = nx.spring_layout(G)
+        # pos = nx.multipartite_layout(G, subset_key=layers, align="horizontal") 
 
         # Flips the tree structure on the horizontal axis
         # for i in range(0, len(pos)):     
         #     pos[i][1] *= -1
 
+        # nx.draw(G, pos=nx.planar_layout(G), with_labels=True)
         nx.draw(G,pos=pos,with_labels=True)
         plt.show()
         
