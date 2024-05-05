@@ -522,9 +522,7 @@ class Network:
         flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
         nx.draw(G, flipped_pos, with_labels = True, node_size=350)
         
-
-
-        fig.suptitle(title, fontsize=16)
+        
         plt.title("Dodag")
         plt.savefig("Graph.jpg", format="JPG", dpi=dpi)
         plt.show()
