@@ -43,9 +43,8 @@ def of0_compute_rank(parent_rank, metric_object = None):
         # måske er https://mailarchive.ietf.org/arch/msg/6tisch/ijlk2XYM6Xz7xQtTB88DMSNjRdw/ brugbar
         # aka måske Sp = a*ETX + b .
         # hvor man lige skal tænke over hvad a skal være (ivhertfald noget scalere ETX ned, fordi vores ETX er stor.)
-        # (husk også at step_of_rank skal være et heltal)
-    
-    if isinstance(metric_object, None):
+        # (husk også at step_of_rank skal være et heltal) 
+    if metric_object is None:
         step_of_rank = defines.DEFAULT_STEP_OF_RANK
     elif isinstance(metric_object, HP_OBJ):
         step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//2)) # or 'log' or 'sigmoid'
