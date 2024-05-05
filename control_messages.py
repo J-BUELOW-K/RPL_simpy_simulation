@@ -258,11 +258,11 @@ class ICMP_DIO:
                        dodag_id = dodag_id)
         self.option = None
 
-    def add_HP_metric(self, HP):
-        self.option = HP_OBJ(HP = HP) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
+    def add_HP_metric(self, cumu_hopcount):
+        self.option = HP_OBJ(cumulative_hop_count = cumu_hopcount) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
 
-    def add_ETX_metric(self, ETX):
-        self.option = ETX_OBJ(ETX = ETX) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
+    def add_ETX_metric(self, cumu_etx):
+        self.option = ETX_OBJ(cumulative_etx = cumu_etx) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
 
 
 

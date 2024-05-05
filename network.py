@@ -1,4 +1,5 @@
 import simpy
+import copy
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -95,6 +96,7 @@ class Node:
         pass
 
     def increment_metric_object_from_neighbor(self, neighbors_metric_object, neighbors_node_id): # helper function used to increment a metric object recieved from a neighbor - to include path from neighbor to this node
+        print(f"debug: nabo objekt:{neighbors_metric_object}")
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_NONE:
             return None
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
@@ -120,10 +122,10 @@ class Node:
 
         icmp_dio = ICMP_DIO(rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
-            #icmp_dio.add_HP_metric() # TODO (mangler input)
+            icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
             pass
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
-            #icmp_dio.add_ETX_metric() # TODO (mangler input)
+            icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
             pass
         packet = Packet(self.node_id, icmp_dio)
         self.broadcast_packet(packet)
@@ -177,7 +179,8 @@ class Node:
 
         ####################  CHECK IF SENDER IS A BETTER PREFERRED PARENT THAN THE CURRENT PREFERRED PARRENT - UPDATE STUFF IF IT IS ####################
 
-        metric_object_through_neighbor = self.increment_metric_object_from_neighbor(senders_metric_object, senders_node_id)
+        senders_metric_object_copy = copy.deepcopy(senders_metric_object) # create copy to not alter the original.
+        metric_object_through_neighbor = self.increment_metric_object_from_neighbor(senders_metric_object_copy, senders_node_id) 
 
         if dodag_reference.prefered_parent == None: # Our node does not have a prefered parent - we simply accept the DIO sender as prefered parent
             dodag_reference.prefered_parent = senders_node_id
@@ -406,6 +409,7 @@ class Network:
             root_node = self.nodes[desired_root_node_id] # assumption: index in self.nodes array matches node_id
 
         
+        
 
         # # Check if specified RPL instance already exists:
         # for instance in root_node.rpl_instances:
@@ -480,10 +484,11 @@ class Network:
 
     def plot_resulting_dodag(self):
         #TODO SKAL RENT FAKTISK LAVE ET PLOT 
+        # for node in self.nodes:
+        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
+
         for node in self.nodes:
-            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
-
-
+            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, HP: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_hop_count} ")
         # def plot_dodag(): # SKAL NOK VÆRE EN METHOD I DODAG CLASSEN
         # G = nx.DiGraph()
         # #G.add_node(1)
