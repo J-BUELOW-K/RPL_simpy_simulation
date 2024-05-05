@@ -51,7 +51,7 @@ def find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version): #
             #print("debug: matching RPL Instance entry found!")
             rpl_instance_idx = i
 
-    if rpl_instance_idx != None: # If there exists an entry for the recieved RPL instance in self.rpl_instances!
+    if rpl_instance_idx is not None: # If there exists an entry for the recieved RPL instance in self.rpl_instances!
         # Find associated Dodag:
         for i in range(len(rpl_instances[rpl_instance_idx].dodag_list)):
             temp_dodag = rpl_instances[rpl_instance_idx].dodag_list[i]
@@ -154,7 +154,7 @@ class Node:
                                                       dio_message.dodag_id, dio_message.vers)
         if rpl_instance_idx == None:
             # No entry in self.rpl_instaces for recieved RPL instance! Create one!
-            dodag_object = Dodag(dio_message.dodag_id, dio_message.vers)
+            dodag_object = Dodag(env=self.env, dodag_id=dio_message.dodag_id, dodag_version_num=dio_message.vers)
             rpl_instance_obj = Rpl_Instance(dio_message.rpl_instance_id)
             rpl_instance_obj.add_dodag(dodag_object)
             self.rpl_instances.append(rpl_instance_obj)
@@ -164,7 +164,7 @@ class Node:
             # There exists an entry for the recieved RPL instance in self.rpl_instances!
             if dodag_list_idx == None:
                 # No existing DODAG entry in the RPL Instance! Create one!
-                dodag_object = Dodag(dio_message.dodag_id, dio_message.version)
+                dodag_object = Dodag(env=self.env, dodag_id=dio_message.dodag_id, dodag_version_num=dio_message.version)
                 self.rpl_instances[rpl_instance_idx].add_dodag(dodag_object)
                 dodag_list_idx = len(self.rpl_instances[rpl_instance_idx].dodag_list) - 1 # value is always just 0
 
@@ -439,12 +439,12 @@ class Network:
                 raise ValueError 
             else:
                 # Create DODAG in root node, within the already existing RPL Instance
-                new_dodag = Dodag(dodag_id, dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
+                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=defines.ROOT_RANK) # setting rank to 0 makes the node the root!
                 root_node.rpl_instances[rpl_instance_idx].add_dodag(new_dodag)
         else:
             # No matching RPL entry exists in root node - create one! (including dodag):
             new_rpl_instance = Rpl_Instance(rpl_instance_id)
-            new_dodag = Dodag(dodag_id, dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
+            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
             new_rpl_instance.add_dodag(new_dodag)
             root_node.rpl_instances.append(new_rpl_instance)
 
