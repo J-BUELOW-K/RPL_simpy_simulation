@@ -3,7 +3,7 @@ import math
 from control_messages import HP_OBJ, ETX_OBJ
 from dodag import Dodag
 import defines
-from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX
+from defines import MINIMUM_STEP_OF_RANK, MAXIMUM_STEP_OF_RANK
 #from network import Node
 
 
@@ -11,15 +11,17 @@ from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOU
 # OCP = 0
 
 
-def map_value_to_step_of_rank(value:float, method:str='linear', min_value:int=0, max_value:float=60000, min_step:int=1, max_step:int=9):
+def map_value_to_step_of_rank(value:float, method:str='linear', min_value:int=0, max_value:float=9999999, min_step_of_rank:int=MINIMUM_STEP_OF_RANK, max_step_of_rank:int=MAXIMUM_STEP_OF_RANK):
+    if value > max_value:
+        raise ValueError(f"value: ({value}) is above max_value - this will break the dodag. consider increasing max_value")
     if method == 'linear': # linear mapping between value and step_of_rank (value is a float between min_value and max_value)
-        return int((value - min_value) / (max_value - min_value) * (max_step - min_step) + min_step)
+        return int((value - min_value) / (max_value - min_value) * (max_step_of_rank - min_step_of_rank) + min_step_of_rank)
     
     elif method == 'log': # logarithmic mapping between value and step_of_rank (value is a float between min_value and max_value)
-        return int(math.log(value) / math.log(max_value) * (max_step - min_step) + min_step)
+        return int(math.log(value) / math.log(max_value) * (max_step_of_rank - min_step_of_rank) + min_step_of_rank)
     
     elif method == 'sigmoid': # sigmoid mapping between value and step_of_rank (value is a float between min_value and max_value)
-        return int(1 / (1 + math.exp(-value)) * (max_step - min_step) + min_step)
+        return int(1 / (1 + math.exp(-value)) * (max_step_of_rank - min_step_of_rank) + min_step_of_rank)
 
 
 
@@ -44,21 +46,17 @@ def of0_compute_rank(parent_rank, metric_object = None):
         # aka måske Sp = a*ETX + b .
         # hvor man lige skal tænke over hvad a skal være (ivhertfald noget scalere ETX ned, fordi vores ETX er stor.)
         # (husk også at step_of_rank skal være et heltal) 
-        
-    
 
     if metric_object is None:
         step_of_rank = defines.DEFAULT_STEP_OF_RANK
     elif isinstance(metric_object, HP_OBJ):
-        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//2)) # or 'log' or 'sigmoid'
-        pass # TODO map hop count til STEP_OF_RANK mellem 1 og 9 
+        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//4)) # or 'log' or 'sigmoid'
     elif isinstance(metric_object, ETX_OBJ):
-        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='linear') # or 'log' or 'sigmoid'
-        #print("debug hejsa3")
+        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='linear', max_value = 120000) # or 'log' or 'sigmoid'
     else:
         raise ValueError("Invalid metric object type")
     
-    
+
     rank_increase = (defines.DEFAULT_RANK_FACTOR*step_of_rank + defines.DEFAULT_RANK_STRETCH) * defines.DEFAULT_MIN_HOP_RANK_INCREASE  
     new_rank =  parent_rank + rank_increase
     
@@ -86,10 +84,9 @@ def of0_compare_parent(current_parent_rank, challenger_parent_rank,
 
     if DAGRank(rank_through_challenger_parent) < DAGRank(rank_through_current_parent):    # only choose challenger parent as new prefered parent IF it results in a better DAGRank (if equal, keep current parent)
         # note, DAGRank() is used when comparing ranks (see RPL standard)
-        return "update parent", DAGRank(rank_through_challenger_parent) 
-    
-    elif DAGRank(rank_through_challenger_parent) >= DAGRank(rank_through_current_parent): # step 8 in RFC 6552
-        return "keep parent", DAGRank(rank_through_current_parent)
+        return "update parent", rank_through_challenger_parent
+    else:
+        return "keep parent", rank_through_current_parent
 
 
     else:

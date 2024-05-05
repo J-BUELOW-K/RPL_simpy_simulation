@@ -12,7 +12,7 @@ def main():
     # Setup simulation
     env = simpy.Environment()
     nw = Network(env)
-    nw.generate_nodes_and_edges(defines.NUMBER_OF_NODES, defines.RADIUS, seed=123123123)
+    nw.generate_nodes_and_edges(defines.NUMBER_OF_NODES, defines.RADIUS, seed = 12312312)
     nw.plot()
     nw.register_node_processes(env)
     nw.construct_new_dodag(123, 123, 123)
@@ -22,7 +22,7 @@ def main():
     # Execute simulation
     env.run(until=defines.SIM_TIME)
 
-    nw.plot_resulting_dodag()
+    nw.plot_resulting_dodag(123, 123, 123)
     # TODO print dodag her (lav til funktion i netowrk klassen, der hent rank og parent fra alle nodes og plotter dem)
 
     #Vi leder efter Geometric grapghs!

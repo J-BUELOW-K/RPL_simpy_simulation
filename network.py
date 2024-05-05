@@ -9,6 +9,7 @@ from control_messages import *
 from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
 import defines
 from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX, NODE_TRANSMIT_TIMER
+from networkx.drawing.nx_agraph import graphviz_layout
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
@@ -50,6 +51,7 @@ def find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version): #
         if rpl_instances[i].rpl_instance_id == rpl_instance_id:
             #print("debug: matching RPL Instance entry found!")
             rpl_instance_idx = i
+            break
 
     if rpl_instance_idx is not None: # If there exists an entry for the recieved RPL instance in self.rpl_instances!
         # Find associated Dodag:
@@ -58,6 +60,7 @@ def find_dodag(rpl_instances: list, rpl_instance_id, dodag_id, dodag_version): #
             if temp_dodag.dodag_id == dodag_id and temp_dodag.dodag_version_num == dodag_version: # Both ID and Version has to match!
                 #print("debug: matching dodag entry found!")
                 dodag_list_idx = i
+                break
 
     return rpl_instance_idx, dodag_list_idx
 
@@ -97,7 +100,7 @@ class Node:
         pass
 
     def increment_metric_object_from_neighbor(self, neighbors_metric_object, neighbors_node_id): # helper function used to increment a metric object recieved from a neighbor - to include path from neighbor to this node
-        print(f"debug: nabo objekt:{neighbors_metric_object}")
+        #print(f"debug: nabo objekt:{neighbors_metric_object}")
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_NONE:
             return None
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
@@ -336,19 +339,17 @@ class Node:
             if self.silent_mode == True:
                 message = yield self.input_msg_queue.get()
                 self.silent_mode = False
-                print(message)
-                print(type(message))
                 self.packet_handler(message)
             else: # if silent_mode = False
                 event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                     # broadcast_dio() # TODO - NODEN SKAL VEL BROADCASTE ALLE DENS DODAGS TIL ALLE DENS CONNECTIONS
-                    print("debug: Node: timeout!")
+                    # print("debug: Node: timeout!") TODO fjerne udkommenteringen
                     self.broadcast_all_dios()
                     pass
                 else: # event was a "message in input_msg_queue" event
                     # TODO HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
-                    print("debug: Node:: packet recieved!")
+                    # print("debug: Node:: packet recieved!") TODO fjerne udkommenteringen
                     self.packet_handler(next(iter(event.values())))
                     pass
            # self.network.plot_resulting_dodag()
@@ -488,48 +489,50 @@ class Network:
 
         plt.show()
 
-    def plot_resulting_dodag(self):
-        #TODO SKAL RENT FAKTISK LAVE ET PLOT 
+
+    # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
+    # kræve en del lagerplads.
+
+    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version): # input: rpl instance, dodag id og dodag version  
+
         # for node in self.nodes:
-        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)} ")
+        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
 
-        for node in self.nodes:
-            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, HP: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_hop_count} ")
-        # def plot_dodag(): # SKAL NOK VÆRE EN METHOD I DODAG CLASSEN
-        # G = nx.DiGraph()
-        # #G.add_node(1)
-        # #G.add_node("davs")
-        # # #G.add_node(3)
-        # # G.add_edge(1,2)
-        # # #G.add_edge(2,3)
-        # # G.add_edge(3,2)
-        # # G.add_edge(3,3)
+        dpi = 200
+        fig_width = 10
+        fig_height = 10
+        fig = plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
 
-        # G.add_node(1)
-        # G.add_node(2)
-        # G.add_node(3)
-        # G.add_node(4)
-        # G.add_node(5)
+        if len(self.nodes) == 0:
+            raise ValueError("No nodes in network")
+        
+        # TODO det her virker lidt som en forkert måde at gøre det her på, men det er den eneste måde jeg lige kunne komme på.
+        # problemet: Jeg finder og bruger indexer for rpl og dodag listerne baserede på 1 node som er hard coded og brugt til alle.
+        rpl_instances = self.nodes[0].rpl_instances
+        rpl_instance_idx, dodag_list_idx = find_dodag(rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version) # return index of dodag and/or rpl instance in list of rpl instances
 
-        # G.add_edge(1,2)
-        # G.add_edge(2,3)
-        # G.add_edge(5,1)
-        # G.add_edge(4,2)
+        if (rpl_instance_idx == None) or (dodag_list_idx == None):
+            raise ValueError("No Dodag to print with the provided IDs and version.")
+        
+        # Sort the list of node objects into numerical order for the nodes' ranks. 
+        sorted_nodes = sorted(self.nodes, key=lambda node: node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
 
-        # G_triangle = nx.DiGraph([(2, 1), (3, 1), (4, 1), (5,2)])
+        # set up a list containing all edges.
+        edges = []
+        for node in sorted_nodes[1:]:
+            child = node.node_id
+            parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
+            edges.append((child, parent))
 
-        # #G = nx.petersen_graph()
-        # #subax1 = plt.subplot(121)
-        # #subax1 = plt.subplot(121)
-        # #nx.draw(G,with_labels=True)
-        # #nx.draw_planar(G_triangle,with_labels=True)
-        # #nx.draw(G_triangle,pos=nx.multipartite_layout(G_triangle),with_labels=True)
-        # G = nx.DiGraph([(1, 0), (2, 0), (3, 0), (4, 2),(5, 3)])
-        # layers = {"b": [4,5], "c": [1,2,3], "d": [0]}  #når jeg skal gøre det automatisk. start med tomt array. så bare brug rank til at start fra bunden og op, hvor jeg appender hver lag
-        # pooos = nx.multipartite_layout(G, subset_key=layers, align="horizontal")
-        # nx.draw(G,pos=pooos,with_labels=True)
+        # plot the DODAG using networkx and graphviz
+        G = nx.DiGraph(edges,)
+        pos = graphviz_layout(G, prog="dot")
+        flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
+        nx.draw(G, flipped_pos, with_labels = True, node_size=350)
+        
+        
+        plt.title("Dodag")
+        plt.savefig("Graph.jpg", format="JPG", dpi=dpi)
+        plt.show()
 
-        # # ER RET SIKKER PÅ VI SKAL BRUGE intergar part of rank (aka dag_rank_macro()) når vi plotter!!!!! Ikke den fulde float rank!
-
-        # #VI SKAL NOK BRUGE DRAW MED POS = multipartite_layout() TIL AT TEGNE DAGS https://networkx.org/documentation/stable/auto_examples/graph/plot_dag_layout.html
-        # plt.show()
+   
