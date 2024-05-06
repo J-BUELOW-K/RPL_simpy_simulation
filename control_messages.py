@@ -121,15 +121,14 @@ class DAO:
     #        +-+-+-+-+-+-+-+-+
 
 
-    def __init__(self, rpl_instance_id, k_flag, d_flag, dao_sequence,\
-                 dodag_id, opt, flags = 0, reserved = 0):
+    def __init__(self, rpl_instance_id, dao_sequence,
+                 dodag_id, opt):
         
         self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
-        self.k_flag = k_flag                        # The 'K' flag indicates that the recipient is expected to send a DAO-ACK back.
-        self.d_flag = d_flag                        # The 'D' flag indicates that the DODAGID field is present. This
+        #self.k_flag = k_flag                        # The 'K' flag indicates that the recipient is expected to send a DAO-ACK back. - WE DONT USE
+        #self.d_flag = d_flag                        # The 'D' flag indicates that the DODAGID field is present. This - WE DONT USE
                                                     # flag MUST be set when a local RPLInstanceID is used.
-        self.flags = flags                          # TODO MUST be set to 0 by sender and ignored by receiver.
-        self.reserved = reserved                    # TODO MUST be set to 0 by the sender and ignored by the receiver.
+        #self.flags = flags                          # TODO MUST be set to 0 by sender and ignored by receiver. - WE DONT USE
         self.dao_sequence = dao_sequence            # Incremented at each unique DAO message from a node and echoed in the DAO-ACK message.
         self.dodag_id = dodag_id                    # TODO Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
                                                     # present when the 'D' flag is set.
@@ -186,6 +185,30 @@ class DAO_ACK:
     # use the standart DAG Metric Container Format. Only the Hop Count (HP) and ETX Reliability
     # Object are implemented. 
 
+
+""" DAO Option - RPL Target """
+
+    #     0                   1                   2                   3
+    #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |   Type = 0x05 | Option Length |     Flags     | Prefix Length |
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |                                                               |
+    #    +                                                               +
+    #    |                Target Prefix (Variable Length)                |
+    #    .                                                               .
+    #    .                                                               .
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+class rpl_target:
+    def __init__(self, ):
+        self.option_type = 0x05
+        self.prefix_len = 0
+        self.target_prefix = None  # identifying an IPv6 destination address. 
+                                   # The bits in the prefix after the prefix length (if any) are
+                                   # reserved and MUST be set to zero on transmission and MUST be
+                                   # ignored on receipt.
 
 
 

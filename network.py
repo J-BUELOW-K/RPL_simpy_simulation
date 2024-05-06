@@ -111,19 +111,18 @@ class Node:
                     neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
         return neighbors_metric_object
                     
-
     def broadcast_packet(self, packet):
-        # broadcast message to all neighbors 
+        # broadcast packet to all neighbors 
         for neighbor in self.neighbors:
             neighbor[0].input_msg_queue.put(packet)   # some simpy examples yield at put(), some dont
 
-    # def debug_print_neighbors(self):
-    #     for nabo in self.neighbors:
-    #         print(f"neighbor node: {nabo[0].node_id}, conection to:{nabo[1].from_node}, connection to: {nabo[1].to_node}, etx: {nabo[1].etx_value}")
+    def broadcast_packet_to_parents(self, packet, dodag: Dodag):
+        parents_ids = [parent[0] for parent in dodag.parents_list]  # parent[0] = node_id of parent
+        for neighbor in self.neighbors:
+            if neighbor.node_id in parents_ids:
+                neighbor[0].input_msg_queue.put(packet)   
 
-    def broadcast_dio(self, rpl_instance_id, dodag: Dodag):
-         # NOTE: DEN SKAL VEL BARE BROADACAST DIS TIL ALLE NODESENS GEMLE DDOAGS. MEN DET MÅ SKAL ET LAG LÆNGERE OPPE
-
+    def broadcast_dio_in_dodag(self, rpl_instance_id: int, dodag: Dodag):
         icmp_dio = ICMP_DIO(rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
             icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
@@ -134,10 +133,23 @@ class Node:
         packet = Packet(self.node_id, icmp_dio)
         self.broadcast_packet(packet)
     
-    def broadcast_all_dios(self):
+    def broadcast_all_dios(self): # for all the dodags, broadcast dio messages
         for instance in self.rpl_instances:
             for dodag in instance.dodag_list:
-               self. broadcast_dio(instance.rpl_instance_id, dodag)
+               self.broadcast_dio_in_dodag(instance.rpl_instance_id, dodag)
+
+    def broadcast_dao_in_dodag(self, rpl_instance_id: int, dodag: Dodag): # send a dao message to all the nodes parents (aka. "broadcast" here only referer to the parent set)
+        dodag.dao_sequence += 1  #increment dao_seqence (acording to the standard)
+        icmp_dao = ICMP_DAO(rpl_instance_id, dodag.dao_sequence, dodag.dodag_id)
+        # TODO MANGLER AT TILFØJE TARGET OPTIONS (HENT DATA FRA DODAGENS ROUTING TABLE)
+        packet = Packet(self.node_id, icmp_dao)
+        self.broadcast_packet_to_parents(packet, dodag)
+        pass
+        
+    def broadcast_all_daos(self): # for all the dodags, send a dao message to all the nodes parents (aka. "broadcast" here only referer to the parent set)
+        for instance in self.rpl_instances:
+            for dodag in instance.dodag_list:
+                self.broadcast_dao_in_dodag(instance.rpl_instance_id, dodag)
 
     
     def dio_handler(self, senders_node_id, dio_message: ICMP_DIO, senders_metric_object = None):
@@ -152,8 +164,6 @@ class Node:
         
 
         ####################  Find RPL Instance and Dodag in the nodes self.rpl_instaces list - If no entries, we create them ####################
-
-        # V2:
         rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, dio_message.rpl_instance_id, \
                                                       dio_message.dodag_id, dio_message.vers)
         if rpl_instance_idx is None:
@@ -175,15 +185,16 @@ class Node:
         intance_reference = self.rpl_instances[rpl_instance_idx]
         dodag_reference = intance_reference.dodag_list[dodag_list_idx]
         
+
+        ####################  Update timestamp for the recieved dodag  ####################  
         dodag_reference.last_dio = self.env.now # update timestamp for the recieved dodag (used in OF0)
-        
         dodag_reference.surrounding_dodags.update({senders_node_id: self.env.now}) # update timestamp for the recieved dodag
-        print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")
+        #print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")
+
 
         ####################  Root does not want a parent  ####################   
         if dodag_reference.rank == defines.ROOT_RANK:
             return
-
 
         ####################  CHECK IF SENDER IS A BETTER PREFERRED PARENT THAN THE CURRENT PREFERRED PARRENT - UPDATE STUFF IF IT IS ####################
 
@@ -208,46 +219,14 @@ class Node:
                 dodag_reference.rank = winner_rank # we can just use the rank computed from of0_compare_parent - we dont have to compute it again
             
 
-        
+        ####################  EVALUATE PARENT SET ####################
 
+        # add neighbor to parent set (if the neighbor is not a parent, it will be removed afterwards):
+        dodag_reference.parent_set.update({senders_node_id:dio_message.rank})
 
+        # remove alle non-parents from the parent set:
+        dodag_reference.parent_set = [parent for parent in dodag_reference.parent_list if parent[1] > dodag_reference.rank] # parent[1] = parent rank
 
-
-
-
-
-
-        
-        
-        # rpl_instance_idx = next((idx for idx, instance in enumerate(self.rpl_instaces) 
-        #                         if instance.rpl_instance_id == dio_message.rpl_instance_id), None)
-        
-        # if rpl_instance_idx is None: # if the node doesn't have a rpl instance with the same id as the one in the dio message
-        #     self.rpl_instaces.append(dodag.Rpl_Instance(dio_message.rpl_instance_id)) # create a new rpl instance object and add it to the list of rpl instances in the node
-        #     rpl_instance_idx = len(self.rpl_instaces) - 1 # get the index of the newly created rpl instance object
-            
-
-        # dodag_idx = next((idx for idx, dodag in enumerate(self.rpl_instaces[rpl_instance_idx].dodag_list) 
-        #                 if dodag.dodag_id == dio_message.dodag_id), None)
-        
-        
-        # if dodag_idx is None: # if the node doesn't have a dodag with the same id as the one in the dio message
-        #     self.rpl_instaces[rpl_instance_idx].dodag_list.append(dodag.Dodag(dio_message.dodag_id, dio_message.version, is_root = False)) # create a new dodag object and add it to the list of dodags in the rpl instance
-        #     dodag_idx = len(self.rpl_instaces[rpl_instance_idx].dodag_list) - 1 # get the index of the newly created dodag object
-            
-
-        # preferred_parent = self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].preferred_parent
-        # rank = self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].rank
-        
-        # if not preferred_parent or self.OF0(dio_message, preferred_parent): # if the new DIO message provides a better parent than the current preferred parent (or the node doesn't have a preferred parent) then update the node's preferred parent
-        #     self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].preferred_parent = source_node_id #TODO new parent object
-            
-        #     self.rpl_instaces[rpl_instance_idx].dodag_list[dodag_idx].rank = compute_rank(dio_message.dodag_id, rank) # Step 8 in RFC 6552  # self.rank skal være den fra den korrekte dodagi RPLinstance arrayed
-            
-        #     # TODO update acculimated ETX, hvis vi vælger en ny parent.. ved ikke lige hvordan det hænger sammen..
-
-        #     # broadcast dio message to all neighbors
-        #     self.broadcast_dio(dio_message)
 
         # 8.1.  DIO Base Rules
 
@@ -284,34 +263,14 @@ class Node:
         #    Conceptually, the preferred parent is a single parent; although, it
         #    may be a set of multiple parents if those parents are equally
         #    preferred and have identical Rank.
-        #       AKA 3 SET (lister). NABOER, PARENTS OG PREFERD PARENT (i RPL kan man have flere preferd parents.. men det arbejder vi ikke med)
-        #       VED IKKE HVAD VI SKAL BRUGE PARENT LISTEN TIL... SÅ TÆNKER VI IGNORE DEM
-        #       ELLER HVAD! HVADD ER DET VI PASSER OF0? ER DET PARENTS ELLER HVAD??? FUCK...
-        #       OKAY, SÅ VI SKAL HAVE EN LISTE MED PARRENTS?? MEN BEHØVER VI DET MED VORES OF0 IMPLMENETRING??
-                #  I OF0 STÅR DER  : As it scans all the candidate neighbors, OF0 keeps the parent that is
-                    #the best for the following criteria (in order):
-                #   SÅ SPØRGSMÅLET ER OM INPUTTET TIL OF0 KAN VÆRE DIO BESKEDER FRA ALLE NABOER, ELLER!!! OM DEN FORVENTER MAN KUN INPUTTER DEN PARENTS(aka naboer med advetised rank mindre end nodens egen rank)
+
+    def dao_handler(self, senders_node_id, dao_message: ICMP_DAO, senders_targets: list[rpl_target]):
 
 
-        # TODO Vores OF0 skal tage metric in mind. og måske også contrains hvis du vælger at tilføje det
-                # (cumulative path ETX calculated as the sum of the link ETX
-                #    of all of the traversed links from the advertising node to the DAG
-                #    root), if it selects that node as its preferred parent, the node
-                #    updates the path ETX by adding the ETX of the local link between
-                #    itself and the preferred parent to the received path cost (path ETX)
-                #    before potentially advertising itself the new path ETX.
-                # AKA UPDATE DET KUMMULATIVE ETX I ETX METRIC OBJEKTET, HVIS VI VÆLGER EN NY PARENT
-                # TROR OGSÅ KUN VI SKAL UPDATE RANK, HVIS VI FÅR EN NY PREFFERED PARRENT.
-
-
-
-        # MEGET VIGTIGT - SE 4.3.2. The ETX Reliability Object I METRIC STANDARDEN
-
-
-
-
-        # tror faktisk ikke noden behøver have en liste over beskeder fra alle de andres dodag info... tror bare, hver gang den får en DIO besked, skal den sammenligne om den giver en bedre preferd parent end tden tidligere. hvis den gør, så update preferd parent, update rank og brug den nye rank i dens dio beskeder. hvis noden får en dio uden at have andre, skal den bare gøre den til preferd parent
-        
+        #  DODAGID: The DODAGID is a Global or Unique Local IPv6 address of the
+        #  root.  A node that joins a DODAG SHOULD provision a host route
+        #  via a DODAG parent to the address used by the root as the
+        #  DODAGID.
 
         pass
 

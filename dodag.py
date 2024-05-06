@@ -22,6 +22,7 @@ class Dodag:
         self.dodag_version_num = dodag_version_num # 0
         #self.MinHopRankIncrease = MinHopRankIncrease # 256.0
         self.last_dio = self.env.now # TODO skal være en timestamp. DET SKAL NOK VÆRE EN SIMPY TIME! IKKE "time" TIME env.now er en ting
+        self.parents_list = []  # Parent set! (aka a list of parents(neighbors with rank greater than the nodes)) - elements will have the format (neighbor_node_id, neighbor_rank)  
         self.prefered_parent = None # node_id of prefered parent
         self.prefered_parent_rank = defines.INFINITE_RANK
 
@@ -29,11 +30,13 @@ class Dodag:
 
         self.metric_object = None
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
-            self.metric_object = control_messages.HP_OBJ(0) # Init hopcount to 0
+            self.metric_object = control_messages.HP_OBJ(0) # init hopcount to 0
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
-            self.metric_object = control_messages.ETX_OBJ(0) # Init ETX to 0
+            self.metric_object = control_messages.ETX_OBJ(0) # init ETX to 0
             
         self.surrounding_dodags = {} # dict of dodag_ids of surrounding dodags and their timestamps
+
+        self.dao_sequence = 0 # init to 0
 
         # TODO der skal måske være noget herinde til at holde alt dodag info fra de andre nodes (info man får i DIO beskederne)(en liste)
 
