@@ -10,6 +10,7 @@ from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
 import defines
 from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX, NODE_TRANSMIT_TIMER
 from networkx.drawing.nx_agraph import graphviz_layout
+import random
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
@@ -78,12 +79,13 @@ class Node:
     #    hmm... men i Process Communication example yielder de ikke på put. det kommer nok an på om man vil sidde stuck indtil den er sendt, eller bare komme videre idk
     # Problem. hvordan tingår en node andre nodes input queues. er det ikke kun noget netwærk objektet kan?? tænk over det
 
-    def __init__(self, env, nw, node_id, xpos, ypos):
+    def __init__(self, env, nw, node_id, xpos, ypos, alive = True):
 
         # Physical network values:
         self.network = nw
         self.env = env
         self.node_id = node_id
+        self.alive = alive
         self.xpos = xpos  # used to estimate ETX
         self.ypos = ypos  # used to estimate ETX
         self.neighbors = [] # Each element is a tuple: (node object, connection object). 
@@ -178,7 +180,7 @@ class Node:
         dodag_reference.last_dio = self.env.now # update timestamp for the recieved dodag (used in OF0)
         
         dodag_reference.surrounding_dodags.update({senders_node_id: self.env.now}) # update timestamp for the recieved dodag
-        print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")
+        # print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")  TODO kommenter ind igen
 
         ####################  Root does not want a parent  ####################   
         if dodag_reference.rank == defines.ROOT_RANK:
@@ -494,15 +496,16 @@ class Network:
     # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
     # kræve en del lagerplads.
 
-    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr=""): # input: rpl instance, dodag id og dodag version  
+    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr = "", show = True, save = False): # input: rpl instance, dodag id og dodag version  
 
         # for node in self.nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
 
         dpi = 200
-        fig_width = 10
-        fig_height = 10
-        fig = plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
+        fig_width = 5
+        fig_height = 5
+        color_map = []
+        plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
 
         if len(self.nodes) == 0:
             raise ValueError("No nodes in network")
@@ -521,7 +524,7 @@ class Network:
         except IndexError:
             print(f"rpl_instance_idx: {rpl_instance_idx}, dodag_list_idx: {dodag_list_idx}")
             sorted_nodes = self.nodes # if the nodes are not sorted, just use the original list
-            pass
+            pass # TODO måske giver dette problemer og måske er det unødvendigt
 
         # set up a list containing all edges.
         edges = []
@@ -529,24 +532,47 @@ class Network:
             child = node.node_id
             parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
             edges.append((child, parent))
-
+       
         # plot the DODAG using networkx and graphviz
-        G = nx.DiGraph(edges,)
+        G = nx.DiGraph(edges)
         pos = graphviz_layout(G, prog="dot")
         flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
-        nx.draw(G, flipped_pos, with_labels = True, node_size=350)
+
+        print(sorted_nodes.nodes)
+
+     # Create node color map
+        for node in sorted_nodes:
+            # node.alive = random.choice([True, False])
+            rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
+            node_id = node.node_id
+            print(node_id)
+            if node.alive is True:
+                if rank == defines.ROOT_RANK:
+                    color_map.append('tab:olive')
+                else:
+                    color_map.append('tab:blue')
+            elif node.alive is False:
+                color_map.append('tab:red')
+        
+        # print(color_map)
+
+        nx.draw(G, flipped_pos, with_labels = True, node_size=350, node_color=color_map)
         
         
         plt.title("Dodag")
-        plt.savefig(f"Graph{nr}.jpg", format="JPG", dpi=dpi)
-        if nr == "":
+        if save is True:
+            plt.savefig(f"Graph{nr}.jpg", format="JPG", dpi=dpi)
+    
+        if show is True:
             plt.show()
         else:
             plt.close()
+        
+
 
     def at_interval_plot(self, interval):
         idx = 0
         while True:
             yield self.env.timeout(interval)
-            self.plot_resulting_dodag(123,123,123, idx)
+            self.plot_resulting_dodag(123,123,123, idx) # TODO skal nok opdates så argumenterne ikke er hardcoded.
             idx += 1

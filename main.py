@@ -12,7 +12,7 @@ def main():
     # Setup simulation
     env = simpy.Environment()
     nw = Network(env)
-    nw.generate_nodes_and_edges(defines.NUMBER_OF_NODES, defines.RADIUS, seed = 12312312)
+    nw.generate_nodes_and_edges(defines.NUMBER_OF_NODES, defines.RADIUS)
     nw.plot()
     nw.register_node_processes(env)
     nw.construct_new_dodag(123, 123, 123)
@@ -20,7 +20,7 @@ def main():
     # TODO: VI SKAL HAVE EN MÅDE HVOR VORES NETWÆRK IKKE KAN HAVE NODE NETWÆRK DER "FLYVER" UDE I INGENTING, for hvis en af de nodes bliver valgt til root er vi fucked
 
     # Execute simulation
-    env.process(nw.at_interval_plot(100))
+    # env.process(nw.at_interval_plot(100)) TODO kommenter ind igen.
     env.run(until=defines.SIM_TIME)
 
     nw.plot_resulting_dodag(123, 123, 123)
