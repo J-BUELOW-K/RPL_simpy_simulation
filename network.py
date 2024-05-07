@@ -111,7 +111,12 @@ class Node:
                 if neighbor[0].node_id == neighbors_node_id:
                     neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
         return neighbors_metric_object
-                    
+
+    def unicast_packet(self, destination, packet): # Destination must be the receiving node_id
+        # Unicast a message to a neighbor
+        for neighbor in self.neighbors:
+            if neighbor.node_id == destination:
+                neighbor[0].input_msg_queue.put(packet)
 
     def broadcast_packet(self, packet):
         # broadcast message to all neighbors 
@@ -140,6 +145,8 @@ class Node:
             for dodag in instance.dodag_list:
                self. broadcast_dio(instance.rpl_instance_id, dodag)
 
+    def broadcast_dis(self):
+        pass
     
     def dio_handler(self, senders_node_id, dio_message: ICMP_DIO, senders_metric_object = None):
         # see section 8 in RPL standarden (RFC 6550) 

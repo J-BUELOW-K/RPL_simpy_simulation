@@ -257,6 +257,13 @@ class ETX_OBJ():
 
 """ ICMP implementations """
 
+class ICMP_DIS:
+
+    def __init__(self, opt = None):
+        self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIS)
+        self.dis = DIS(opt=opt)
+        self.option = None
+
 class ICMP_DIO:
 
     # The options field of the ICMP_DIO is limited to 1 option per packet. 
@@ -290,12 +297,6 @@ class ICMP_DAO_ACK:
     def __init__(self) -> None:
         pass
 
-class ICMP_DIS:
-
-    def __init__(self, opt = None):
-        self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIS)
-        self.dis = DIS(opt=opt)
-        self.option = None
 
 """ Packet implementation """
 
