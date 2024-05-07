@@ -7,10 +7,9 @@ import math
 from dodag import Rpl_Instance, Dodag
 from control_messages import *
 from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
-import defines
-from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX, NODE_TRANSMIT_TIMER
+from defines import *
 from networkx.drawing.nx_agraph import graphviz_layout
-import random
+
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
@@ -183,7 +182,7 @@ class Node:
         # print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")  TODO kommenter ind igen
 
         ####################  Root does not want a parent  ####################   
-        if dodag_reference.rank == defines.ROOT_RANK:
+        if dodag_reference.rank == ROOT_RANK:
             return
 
 
@@ -321,17 +320,17 @@ class Node:
         # Read ICMP Header:
         #print(f"yesdu: {packet}")
         icmp_header = packet.payload.icmp
-        if icmp_header.type != defines.TYPE_RPL_CONTOL_MSG:
+        if icmp_header.type != TYPE_RPL_CONTOL_MSG:
             # invalid packet - ignore it
             return
-        if icmp_header.code == defines.CODE_DIO:
+        if icmp_header.code == CODE_DIO:
             self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.option)
             pass # TODO
-        elif icmp_header.code == defines.CODE_DAO:
+        elif icmp_header.code == CODE_DAO:
             pass # TODO
-        elif icmp_header.code == defines.CODE_DAO_ACK:
+        elif icmp_header.code == CODE_DAO_ACK:
             pass # TODO
-        elif icmp_header.code == defines.CODE_DIS:
+        elif icmp_header.code == CODE_DIS:
             pass # TODO
 
 
@@ -449,12 +448,12 @@ class Network:
                 raise ValueError 
             else:
                 # Create DODAG in root node, within the already existing RPL Instance
-                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=defines.ROOT_RANK) # setting rank to 0 makes the node the root!
+                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=ROOT_RANK) # setting rank to 0 makes the node the root!
                 root_node.rpl_instances[rpl_instance_idx].add_dodag(new_dodag)
         else:
             # No matching RPL entry exists in root node - create one! (including dodag):
             new_rpl_instance = Rpl_Instance(rpl_instance_id)
-            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
+            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = ROOT_RANK) # setting rank to 0 makes the node the root!
             new_rpl_instance.add_dodag(new_dodag)
             root_node.rpl_instances.append(new_rpl_instance)
 
@@ -480,16 +479,18 @@ class Network:
             env.process(node.run(env))
     
     def plot(self):
-        pos = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
-        nx.draw_networkx_edges(self.networkx_graph, pos)
-        nx.draw_networkx_nodes(self.networkx_graph, pos, node_size=80)
+        poss = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
+        color_map = ['tab:olive' if i == 0 else 'tab:blue' for i in range(len(self.networkx_graph.nodes()))]
+
+        nx.draw_networkx_edges(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE)
+        nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE, node_color=color_map)
 
         # Draw ETX edge labels:
         # etx_labels = {}
         # for connection in self.connections:
         #     etx_labels[(connection.from_node, connection.to_node)] =  round(connection.etx_value) #FORKERT!!!  VÆRDIERENE ER KORREKT SAT I PLOTTET
         # nx.draw_networkx_edge_labels(self.networkx_graph, pos, edge_labels=etx_labels, font_size = 6)#verticalalignment="baseline")
-
+        plt.title("Network")
         plt.show()
 
 
@@ -501,9 +502,6 @@ class Network:
         # for node in self.nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
 
-        dpi = 200
-        plt.figure(dpi=dpi)
-
         if len(self.nodes) == 0:
             raise ValueError("No nodes in network")
         
@@ -511,7 +509,6 @@ class Network:
         # problemet: Jeg finder og bruger indexer for rpl og dodag listerne baserede på 1 node som er hard coded og brugt til alle.
         rpl_instances = self.nodes[0].rpl_instances
         rpl_instance_idx, dodag_list_idx = find_dodag(rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version) # return index of dodag and/or rpl instance in list of rpl instances
-
         if (rpl_instance_idx == None) or (dodag_list_idx == None):
             raise ValueError("No Dodag to print with the provided IDs and version.")
 
@@ -524,8 +521,9 @@ class Network:
        
         # plot the DODAG using networkx and graphviz
         G = nx.DiGraph(edges)
-        pos = graphviz_layout(G, prog="dot")
-        flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
+        poss = graphviz_layout(G, prog="dot") 
+        flipped_poss = {node: (x,-y) for (node, (x,y)) in poss.items()}
+        print(flipped_poss)
 
         color_map = []
         for nodex in G.nodes():
@@ -533,15 +531,20 @@ class Network:
                 rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
                 if node.node_id == nodex:
                     if node.alive:
-                        color_map.append('tab:olive' if rank == defines.ROOT_RANK else 'tab:blue')
+                        color_map.append('tab:olive' if rank == ROOT_RANK else 'tab:blue')
                     else:
                         color_map.append('tab:red')
 
-        nx.draw(G, flipped_pos, with_labels = True, node_size=350, node_color=color_map)
+        nx.draw_networkx_edges(G, flipped_poss, node_size=DODAG_NODE_SIZE)
+        nx.draw_networkx_nodes(G, flipped_poss, node_size=DODAG_NODE_SIZE, node_color=color_map)
+        nx.draw_networkx_labels(G, flipped_poss, font_size=LABLE_SIZE)
+
+
+        # nx.draw(G, flipped_poss, with_labels = True, node_size=250, node_color=color_map, font_size=6, width=.7, arrowsize=7)
         
         plt.title("Dodag")
         if save is True:
-            plt.savefig(f"Graph{nr}.jpg", format="JPG", dpi=dpi)
+            plt.savefig(f"Graph{nr}.jpg", format="JPG", dpi=200)
     
         if show is True:
             plt.show()

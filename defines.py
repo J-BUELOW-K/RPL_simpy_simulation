@@ -39,3 +39,7 @@ METRIC_OBJECT_HOPCOUNT = 1
 METRIC_OBJECT_ETX = 2
 METRIC_OBJECT_TYPE = METRIC_OBJECT_ETX # This is the metric object that the simulation will use - choose either of the above
 
+"""Network and dodag plotting setting"""
+DODAG_NODE_SIZE = 150
+NETWORK_NODE_SIZE = 80
+LABLE_SIZE = 7
