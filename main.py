@@ -4,10 +4,14 @@ from defines import *
 
 
 
-
 def main():
     print("hello world")
-    #plot_dodag()
+
+
+    rpl_instance = 1  # arbitrarily chosen 
+    dodag_id = defines.IPV6_GLOBAL_UCAST_NETWORK_PREFIX + ":0:0:0:1" +f"/{defines.IPV6_ADDRESS_PREFIX_LEN}" # From the RPL standard: The DODAGID is a Global or Unique Local IPv6 address of the root.
+                                                                                                            # we simply assign the root the imaginary global unicast address 2001:db8:0:1::1 (sunbet is 1, interface is 1)
+    dodag_version = 1 # arbitrarily chosen 
 
     # Setup simulation
     env = simpy.Environment()
@@ -15,15 +19,14 @@ def main():
     nw.generate_nodes_and_edges(NUMBER_OF_NODES, RADIUS)
     nw.plot()
     nw.register_node_processes(env)
-    nw.construct_new_dodag(123, 123, 123)
-
-    # TODO: VI SKAL HAVE EN MÅDE HVOR VORES NETWÆRK IKKE KAN HAVE NODE NETWÆRK DER "FLYVER" UDE I INGENTING, for hvis en af de nodes bliver valgt til root er vi fucked
+    nw.construct_new_dodag(rpl_instance, dodag_id, dodag_version)
 
     # Execute simulation
-    env.process(nw.at_interval_plot(100))
-    env.run(until=SIM_TIME)
+    env.process(nw.at_interval_plot(rpl_instance, dodag_id, dodag_version,100))
+    env.run(until=SIM_TIME) 
 
-    nw.plot_resulting_dodag(123, 123, 123)
+    nw.plot_resulting_dodag(rpl_instance, dodag_id, dodag_version)
+    # TODO print dodag her (lav til funktion i netowrk klassen, der hent rank og parent fra alle nodes og plotter dem)
 
     #Vi leder efter Geometric grapghs!
     # https://networkx.org/documentation/stable/reference/generators.html
