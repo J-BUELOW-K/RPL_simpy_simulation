@@ -115,7 +115,7 @@ class Node:
     def unicast_packet(self, destination, packet): # Destination must be the receiving node_id
         # Unicast a message to a neighbor
         for neighbor in self.neighbors:
-            if neighbor.node_id == destination:
+            if neighbor.node_id[0] == destination:
                 neighbor[0].input_msg_queue.put(packet)
 
     def broadcast_packet(self, packet):
