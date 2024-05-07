@@ -9,13 +9,17 @@ def main():
     print("hello world")
     #plot_dodag()
 
+    rpl_instance = 1
+    dodag_id =   # det er en string. conver til int, så den kan bruges af resten af systemet  # From the RPL standard: The DODAGID is a Global or Unique Local IPv6 address of the root.
+    dodag_version = 1
+
     # Setup simulation
     env = simpy.Environment()
     nw = Network(env)
     nw.generate_nodes_and_edges(defines.NUMBER_OF_NODES, defines.RADIUS, seed = 12312312)
     nw.plot()
     nw.register_node_processes(env)
-    nw.construct_new_dodag(123, 123, 123)
+    nw.construct_new_dodag(rpl_instance, dodag_id, dodag_version)
 
     # TODO: VI SKAL HAVE EN MÅDE HVOR VORES NETWÆRK IKKE KAN HAVE NODE NETWÆRK DER "FLYVER" UDE I INGENTING, for hvis en af de nodes bliver valgt til root er vi fucked
 
@@ -23,7 +27,7 @@ def main():
     env.process(nw.at_interval_plot(100))
     env.run(until=defines.SIM_TIME)
 
-    nw.plot_resulting_dodag(123, 123, 123)
+    nw.plot_resulting_dodag(rpl_instance, dodag_id, dodag_version)
     # TODO print dodag her (lav til funktion i netowrk klassen, der hent rank og parent fra alle nodes og plotter dem)
 
     #Vi leder efter Geometric grapghs!

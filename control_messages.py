@@ -1,6 +1,31 @@
 
 import defines
 
+""" DAO Option - RPL Target """
+
+    #     0                   1                   2                   3
+    #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |   Type = 0x05 | Option Length |     Flags     | Prefix Length |
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |                                                               |
+    #    +                                                               +
+    #    |                Target Prefix (Variable Length)                |
+    #    .                                                               .
+    #    .                                                               .
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+class RPL_target:
+    def __init__(self, target_prefix, prefix_len):
+        self.option_type = 0x05
+        self.prefix_len = 0
+        self.target_prefix = None  # identifying an IPv6 destination address. 
+                                   # The bits in the prefix after the prefix length (if any) are
+                                   # reserved and MUST be set to zero on transmission and MUST be
+                                   # ignored on receipt.
+
+
 """ ICMP header implementation """
 
 class ICMP_header:
@@ -122,7 +147,7 @@ class DAO:
 
 
     def __init__(self, rpl_instance_id, dao_sequence,
-                 dodag_id, opt):
+                 dodag_id, amount_of_targets = 0):
         
         self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
         #self.k_flag = k_flag                        # The 'K' flag indicates that the recipient is expected to send a DAO-ACK back. - WE DONT USE
@@ -132,11 +157,13 @@ class DAO:
         self.dao_sequence = dao_sequence            # Incremented at each unique DAO message from a node and echoed in the DAO-ACK message.
         self.dodag_id = dodag_id                    # TODO Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
                                                     # present when the 'D' flag is set.
-        self.opt = opt                              # The DIO message MAY carry valid options.
-                                                    # This project supports Hop Count Objects, EXT reliability object, or none.
+        self.amount_of_targets = amount_of_targets  # Amount of targets in the DAO message options. note: THIS IS NOT A PART OF THE STANDARD
     
     # All fields included, however not all are necessarily used.
     # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.4
+
+    def add_rpl_target(self, target_prefix: int, target_prefix_len: int):
+        self.opt.append(RPL_target(target_prefix, target_prefix_len))
 
  
 
@@ -185,30 +212,6 @@ class DAO_ACK:
     # use the standart DAG Metric Container Format. Only the Hop Count (HP) and ETX Reliability
     # Object are implemented. 
 
-
-""" DAO Option - RPL Target """
-
-    #     0                   1                   2                   3
-    #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #    |   Type = 0x05 | Option Length |     Flags     | Prefix Length |
-    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #    |                                                               |
-    #    +                                                               +
-    #    |                Target Prefix (Variable Length)                |
-    #    .                                                               .
-    #    .                                                               .
-    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-
-class rpl_target:
-    def __init__(self, ):
-        self.option_type = 0x05
-        self.prefix_len = 0
-        self.target_prefix = None  # identifying an IPv6 destination address. 
-                                   # The bits in the prefix after the prefix length (if any) are
-                                   # reserved and MUST be set to zero on transmission and MUST be
-                                   # ignored on receipt.
 
 
 
@@ -262,6 +265,11 @@ class ETX_OBJ():
 
     # Referce: https://datatracker.ietf.org/doc/html/rfc6551#section-4.3.2
 
+class Prefix_info:
+    def __init__(self, prefix, prefix_len):
+        self.option_type = 0x08
+        self.prefix = prefix
+        self.prefix_len = prefix_len
 
 
 
@@ -272,20 +280,21 @@ class ICMP_DIO:
     # The options field of the ICMP_DIO is limited to 1 option per packet. 
     # This is in contrast to the standard.
 
-    def __init__(self, rpl_instance_id: int, vers: int, rank: int, dodag_id: int):
+    def __init__(self, rpl_instance_id: int, vers: int, rank: int, dodag_id: int, prefix = None, prefix_len = 0):
 
         self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIO)
         self.dio = DIO(rpl_instance_id = rpl_instance_id,\
                        vers = vers,\
                        rank = rank,\
                        dodag_id = dodag_id)
-        self.option = None
+        self.metric_option = None # acording to the standard, options are normally attached to the DIO, not the ICMP_DIO... however, we do it this way
+        self.prefix_option = Prefix_info(prefix, prefix_len) # acording to the standard, options are normally attached to the DIO, not the ICMP_DIO... however, we do it this way
 
     def add_HP_metric(self, cumu_hopcount):
-        self.option = HP_OBJ(cumulative_hop_count = cumu_hopcount) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
+        self.metric_option = HP_OBJ(cumulative_hop_count = cumu_hopcount) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
 
     def add_ETX_metric(self, cumu_etx):
-        self.option = ETX_OBJ(cumulative_etx = cumu_etx) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
+        self.metric_option = ETX_OBJ(cumulative_etx = cumu_etx) # note, we skip the "DAG Metric Container" header (sec 6.7.4 in RPL standard)
 
 
 

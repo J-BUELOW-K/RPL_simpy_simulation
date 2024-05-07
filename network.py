@@ -4,7 +4,7 @@ import copy
 import networkx as nx
 import matplotlib.pyplot as plt
 import math
-from dodag import Rpl_Instance, Dodag
+from dodag import Rpl_Instance, Dodag, generate_linklocal_ipv6_address
 from control_messages import *
 from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
 import defines
@@ -95,6 +95,10 @@ class Node:
         self.input_msg_queue = simpy.Store(self.env, capacity=simpy.core.Infinity)
         self.silent_mode = True  # node will stay silent untill (see section 18.2.1.1 in RPL standard)
 
+        # IPv6 address:
+        self.ipv6_address = generate_linklocal_ipv6_address(node_id) # ipv6 address of the node
+        self.ipv6_address_prefix_len = defines.IPV6_ADDRESS_PREFIX_LEN # ipv6 address prefix length
+
     def add_to_neighbors_list(self, neighbor_object, connection_object): # add a single neighbor to the self.neighbors list
         self.neighbors.append((neighbor_object, connection_object))
         pass
@@ -111,48 +115,46 @@ class Node:
                     neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
         return neighbors_metric_object
                     
+
     def broadcast_packet(self, packet):
         # broadcast packet to all neighbors 
         for neighbor in self.neighbors:
-            neighbor[0].input_msg_queue.put(packet)   # some simpy examples yield at put(), some dont
-
+            neighbor[0].input_msg_queue.put(packet)   # some simpy examples yield at put(), some dont 
+    
+    def broadcast_all_dios(self): # for all the dodags, broadcast dio messages
+        for instance in self.rpl_instances:
+            for dodag in instance.dodag_list:
+                icmp_dio = ICMP_DIO(instance.rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
+                if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+                    icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
+                    pass
+                elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
+                    icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
+                    pass
+                packet = Packet(self.node_id, icmp_dio)
+                self.broadcast_packet(packet)
+        
     def broadcast_packet_to_parents(self, packet, dodag: Dodag):
         parents_ids = [parent[0] for parent in dodag.parents_list]  # parent[0] = node_id of parent
         for neighbor in self.neighbors:
             if neighbor.node_id in parents_ids:
                 neighbor[0].input_msg_queue.put(packet)   
 
-    def broadcast_dio_in_dodag(self, rpl_instance_id: int, dodag: Dodag):
-        icmp_dio = ICMP_DIO(rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
-        if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
-            icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
-            pass
-        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
-            icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
-            pass
-        packet = Packet(self.node_id, icmp_dio)
-        self.broadcast_packet(packet)
-    
-    def broadcast_all_dios(self): # for all the dodags, broadcast dio messages
-        for instance in self.rpl_instances:
-            for dodag in instance.dodag_list:
-               self.broadcast_dio_in_dodag(instance.rpl_instance_id, dodag)
-
-    def broadcast_dao_in_dodag(self, rpl_instance_id: int, dodag: Dodag): # send a dao message to all the nodes parents (aka. "broadcast" here only referer to the parent set)
-        dodag.dao_sequence += 1  #increment dao_seqence (acording to the standard)
-        icmp_dao = ICMP_DAO(rpl_instance_id, dodag.dao_sequence, dodag.dodag_id)
-        # TODO MANGLER AT TILFØJE TARGET OPTIONS (HENT DATA FRA DODAGENS ROUTING TABLE)
-        packet = Packet(self.node_id, icmp_dao)
-        self.broadcast_packet_to_parents(packet, dodag)
-        pass
-        
     def broadcast_all_daos(self): # for all the dodags, send a dao message to all the nodes parents (aka. "broadcast" here only referer to the parent set)
         for instance in self.rpl_instances:
             for dodag in instance.dodag_list:
-                self.broadcast_dao_in_dodag(instance.rpl_instance_id, dodag)
+                dodag.dao_sequence += 1  #increment dao_seqence (acording to the standard - see section 9.3 (point 1) in RFC 6550)
+                icmp_dao = ICMP_DAO(instance.rpl_instance_id, dodag.dao_sequence, dodag.dodag_id)
+                # TODO MANGLER AT TILFØJE TARGET OPTIONS (HENT DATA FRA DODAGENS ROUTING TABLE)
+                for child in dodag.child_list:
+                    #icmp_dao.add_rpl_target()
+                    # TODO
+                    pass
+                packet = Packet(self.node_id, icmp_dao)
+                self.broadcast_packet_to_parents(packet, dodag)
 
     
-    def dio_handler(self, senders_node_id, dio_message: ICMP_DIO, senders_metric_object = None):
+    def dio_handler(self, senders_node_id, dio_message: ICMP_DIO, senders_metric_object = None, senders_prefix_info: Prefix_info = None):
         # see section 8 in RPL standarden (RFC 6550) 
         # Ehhh:
         #  DODAGID: The DODAGID is a Global or Unique Local IPv6 address of the
@@ -173,7 +175,7 @@ class Node:
             rpl_instance_obj.add_dodag(dodag_object)
             self.rpl_instances.append(rpl_instance_obj)
             rpl_instance_idx = len(self.rpl_instances) - 1 # there might already be entries for other instances in the self.rpl_instaces list
-            dodag_list_idx = len(rpl_instance_obj.dodag_list) - 1  # value is always just 0 if onlhy one dodag in the list
+            dodag_list_idx = len(rpl_instance_obj.dodag_list) - 1  # value is always just 0
         else:
             # There exists an entry for the recieved RPL instance in self.rpl_instances!
             if dodag_list_idx is None:
@@ -219,13 +221,45 @@ class Node:
                 dodag_reference.rank = winner_rank # we can just use the rank computed from of0_compare_parent - we dont have to compute it again
             
 
-        ####################  EVALUATE PARENT SET ####################
+        ####################  EVALUATE PARENT SET  ####################
 
-        # add neighbor to parent set (if the neighbor is not a parent, it will be removed afterwards):
-        dodag_reference.parent_set.update({senders_node_id:dio_message.rank})
+        # add neighbor to parent list if not already there (if the neighbor is not a parent, it will be removed afterwards):
+        already_in_parents_list = False
+        for parent in dodag_reference.parents_list:
+            if parent[0] == senders_node_id:
+                # we already have an entry for this parent in the parent list
+                parent = (senders_node_id, dio_message.rank) # update rank
+                already_in_parents_list = True
+                break
+        if not already_in_parents_list: # if we dont already have an entry for this parent in the parent list
+            dodag_reference.parents_list.append((senders_node_id, dio_message.rank))
 
-        # remove alle non-parents from the parent set:
-        dodag_reference.parent_set = [parent for parent in dodag_reference.parent_list if parent[1] > dodag_reference.rank] # parent[1] = parent rank
+        # remove alle non-parents from the parent list :
+        dodag_reference.parents_list = [parent for parent in dodag_reference.parents_list if parent[1] < dodag_reference.rank] # parent[1] = parent rank
+
+
+        ####################  EVALUATE CHILD SET ####################'
+
+        already_in_children_list = False
+        for child in dodag_reference.children_list:
+            if child[0] == senders_node_id:
+                # we already have an entry for this child in the child list
+                child = (senders_node_id, dio_message.rank) # update rank
+                already_in_children_list = True
+                break
+        if not already_in_children_list: # if we dont already have an entry for this child in the child list
+            dodag_reference.children_list.append((senders_node_id, dio_message.rank))
+
+        # remove alle non-children from the child set:
+        dodag_reference.children_list = [child for child in dodag_reference.children_list if child[1] > dodag_reference.rank]
+
+
+
+        # # add neighbor to child set (if the neighbor is not a child, it will be removed afterwards):
+        # dodag_reference.children_list.append((senders_node_id, dio_message.rank))
+
+        # # remove alle non-children from the child set:
+        # dodag_reference.children_list = [child for child in dodag_reference.children_list if child[1] < dodag_reference.rank] # child[1] = child rank
 
 
         # 8.1.  DIO Base Rules
@@ -264,13 +298,15 @@ class Node:
         #    may be a set of multiple parents if those parents are equally
         #    preferred and have identical Rank.
 
-    def dao_handler(self, senders_node_id, dao_message: ICMP_DAO, senders_targets: list[rpl_target]):
+    def dao_handler(self, senders_node_id, dao_message: ICMP_DAO, senders_targets: list[RPL_target]):
 
 
         #  DODAGID: The DODAGID is a Global or Unique Local IPv6 address of the
         #  root.  A node that joins a DODAG SHOULD provision a host route
         #  via a DODAG parent to the address used by the root as the
         #  DODAGID.
+
+        # Husk at tjek seq number. og ognore daoen hvis den er forældet
 
         pass
 
@@ -282,7 +318,7 @@ class Node:
             # invalid packet - ignore it
             return
         if icmp_header.code == defines.CODE_DIO:
-            self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.option)
+            self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.metric_option, packet.payload.prefix_option)
             pass # TODO
         elif icmp_header.code == defines.CODE_DAO:
             pass # TODO
@@ -346,7 +382,6 @@ class Network:
                                                                                               # note: node_id matches index in self.nodes array!
             #print(f"xpos: {node[1][0]}, ypos: {node[1][1]}")
 
-
         # Estimate relative ETX values for each connection:
         for connection in self.connections:
             a = self.nodes[connection.from_node].xpos  # assumption: index in self.nodes array matches node_id
@@ -374,29 +409,7 @@ class Network:
         else:
             # use the specified node as root
             root_node = self.nodes[desired_root_node_id] # assumption: index in self.nodes array matches node_id
-
         
-        
-
-        # # Check if specified RPL instance already exists:
-        # for instance in root_node.rpl_instances:
-        #     if instance.rpl_instance_id == rpl_instance_id:
-        #         # simply use this instance
-        #         # Check if identical DODAG already exists in this RPL Instance:
-        #         for dodag in instance.dodag_list:
-        #             if dodag.dodag_id == dodag_id and dodag.dodag_version_num == dodag_version_num:
-        #                 # Identical dodag already exists within the specified RPL Instance...
-        #                 raise 
-        #         return # husk at return her! ... medmindre der mere vi skal lave.. f.eks. sende den først dio ud
-
-        # # No rpl instance found with matching rpl_istance_id... create one (including dodag)!
-        # rpl_instance = Rpl_Instance(rpl_instance_id)
-        # dodag = Dodag(dodag_id, dodag_version_num, rank = 0) # setting rank to 0 makes it root in the new dodag!
-        # rpl_instance.add_dodag(dodag)
-        # root_node.rpl_instances.append(rpl_instance)
-
-
-        #V2:
         # Check if specified RPL instance/dodag already exists in root node:
         rpl_instance_idx, dodag_list_idx = find_dodag(root_node.rpl_instances, rpl_instance_id, dodag_id, dodag_version)
         if rpl_instance_idx != None:
@@ -457,6 +470,9 @@ class Network:
 
         # for node in self.nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
+
+        for node in self.nodes:
+            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, parents_list: {node.rpl_instances[0].dodag_list[0].parents_list}, children_list: {node.rpl_instances[0].dodag_list[0].children_list}, ")
 
         dpi = 200
         fig_width = 10

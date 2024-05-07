@@ -33,9 +33,14 @@ MINIMUM_RANK_FACTOR  = 1
 MAXIMUM_RANK_FACTOR  = 4
 DEFAULT_MIN_HOP_RANK_INCREASE = 256 # (defined in sec 18.2.8 in rfc6550)
 
-#
+"""Metric Object defines"""
 METRIC_OBJECT_NONE = 0
 METRIC_OBJECT_HOPCOUNT = 1
 METRIC_OBJECT_ETX = 2
 METRIC_OBJECT_TYPE = METRIC_OBJECT_ETX # This is the metric object that the simulation will use - choose either of the above
+
+"""Link Local IPv6 Address defines"""
+IPV6_ADDRESS_PREFIX_LEN = 64
+IPV6_ADDRESS_PREFIX_HEX_LEN = 16 # (64 bits = 16 hex characters)
+IPV6_ADDRESS_HEX_LEN = 32 # (128 bits = 32 hex characters)
 
