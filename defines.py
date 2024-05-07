@@ -39,6 +39,9 @@ METRIC_OBJECT_HOPCOUNT = 1
 METRIC_OBJECT_ETX = 2
 METRIC_OBJECT_TYPE = METRIC_OBJECT_ETX # This is the metric object that the simulation will use - choose either of the above
 
+"""imaginary ISP "assigned" network prefix for ipv6 global unicast address (used for the node)"""
+IPV6_GLOBAL_UCAST_NETWORK_PREFIX = "2001:db8:0:1" # (subnet is simply set to 1)
+
 """Link Local IPv6 Address defines"""
 IPV6_ADDRESS_PREFIX_LEN = 64
 IPV6_ADDRESS_PREFIX_HEX_LEN = 16 # (64 bits = 16 hex characters)

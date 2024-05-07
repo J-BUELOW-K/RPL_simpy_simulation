@@ -146,8 +146,7 @@ class DAO:
     #        +-+-+-+-+-+-+-+-+
 
 
-    def __init__(self, rpl_instance_id, dao_sequence,
-                 dodag_id, amount_of_targets = 0):
+    def __init__(self, rpl_instance_id, dodag_id, dao_sequence = 0, amount_of_targets = 0):
         
         self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
         #self.k_flag = k_flag                        # The 'K' flag indicates that the recipient is expected to send a DAO-ACK back. - WE DONT USE
@@ -166,51 +165,51 @@ class DAO:
         self.opt.append(RPL_target(target_prefix, target_prefix_len))
 
  
+# We do not implement the DAO_ACK in this project.
+# class DAO_ACK:
 
-class DAO_ACK:
+#     """Destination Advertisement Object Acknowledgement"""
 
-    """Destination Advertisement Object Acknowledgement"""
-
-    #     0                   1                   2                   3
-    #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #    | RPLInstanceID |D|  Reserved   |  DAOSequence  |    Status     |
-    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #    |                                                               |
-    #    +                                                               +
-    #    |                                                               |
-    #    +                            DODAGID*                           +
-    #    |                                                               |
-    #    +                                                               +
-    #    |                                                               |
-    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    #    |   Option(s)...
-    #    +-+-+-+-+-+-+-+-+
+#     #     0                   1                   2                   3
+#     #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+#     #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#     #    | RPLInstanceID |D|  Reserved   |  DAOSequence  |    Status     |
+#     #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#     #    |                                                               |
+#     #    +                                                               +
+#     #    |                                                               |
+#     #    +                            DODAGID*                           +
+#     #    |                                                               |
+#     #    +                                                               +
+#     #    |                                                               |
+#     #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#     #    |   Option(s)...
+#     #    +-+-+-+-+-+-+-+-+
 
 
-    def __init__(self, rpl_instance_id, d_flag, reserved,\
-                 dao_sequence, status, dodag_id, opt):
+#     def __init__(self, rpl_instance_id, d_flag, reserved,\
+#                  dao_sequence, status, dodag_id, opt):
         
-        self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
-        self.d_flag = d_flag                        # The 'D' flag indicates that the DODAGID field is present. This
-                                                    # flag MUST be set when a local RPLInstanceID is used.
-        self.reserved = reserved                    # Reserved for flags. 
-        self.dao_sequence = dao_sequence            # Incremented at each DAO message from a node, and echoed in the DAO-ACK 
-                                                    # by the recipient. The DAOSequence is used to correlate a DAO message and a DAO ACK message
-        self.status = status                        # TODO Status 0: Unqualified acceptance (i.e., the node receiving the DAO-ACK is not rejected).
-        self.dodag_id = dodag_id                    # TODO Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
-                                                    # present when the 'D' flag is set.
-        self.opt = opt                              # The DIO message MAY carry valid options.
+#         self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
+#         self.d_flag = d_flag                        # The 'D' flag indicates that the DODAGID field is present. This
+#                                                     # flag MUST be set when a local RPLInstanceID is used.
+#         self.reserved = reserved                    # Reserved for flags. 
+#         self.dao_sequence = dao_sequence            # Incremented at each DAO message from a node, and echoed in the DAO-ACK 
+#                                                     # by the recipient. The DAOSequence is used to correlate a DAO message and a DAO ACK message
+#         self.status = status                        # TODO Status 0: Unqualified acceptance (i.e., the node receiving the DAO-ACK is not rejected).
+#         self.dodag_id = dodag_id                    # TODO Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
+#                                                     # present when the 'D' flag is set.
+#         self.opt = opt                              # The DIO message MAY carry valid options.
 
-    # All fields included, however not all are necessarily used.
-    # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.5
-
-
+#     # All fields included, however not all are necessarily used.
+#     # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.5
 
 
-    # Routing Metrics applied in this project has been reduced a lot and will not
-    # use the standart DAG Metric Container Format. Only the Hop Count (HP) and ETX Reliability
-    # Object are implemented. 
+
+
+#     # Routing Metrics applied in this project has been reduced a lot and will not
+#     # use the standart DAG Metric Container Format. Only the Hop Count (HP) and ETX Reliability
+#     # Object are implemented. 
 
 
 
@@ -280,7 +279,7 @@ class ICMP_DIO:
     # The options field of the ICMP_DIO is limited to 1 option per packet. 
     # This is in contrast to the standard.
 
-    def __init__(self, rpl_instance_id: int, vers: int, rank: int, dodag_id: int, prefix = None, prefix_len = 0):
+    def __init__(self, rpl_instance_id: int, vers: int, rank: int, dodag_id, prefix = None, prefix_len = 0):
 
         self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIO)
         self.dio = DIO(rpl_instance_id = rpl_instance_id,\
@@ -299,9 +298,13 @@ class ICMP_DIO:
 
 
 class ICMP_DAO:
-
-    def __init__(self) -> None:
-        pass
+    def __init__(self, rpl_instance_id: int, dodag_id, dao_sequence = 0, amount_of_targets = 0) -> None:
+        self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DAO)
+        self.dao = DAO(rpl_instance_id, dodag_id, dao_sequence, amount_of_targets)
+        self.targets = []
+        
+    def add_target(self, target_prefix, prefix_len):
+        self.targets.append(RPL_target(target_prefix, prefix_len))
 
 
 class ICMP_DAO_ACK:
