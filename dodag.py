@@ -72,8 +72,8 @@ class Dodag:
 
         self.dao_sequence = 0 # init to 0
         self.children_dao_seq_list = [] # list of tuples (child_node_id, seq_num) - used to keep track of the sequence number of the DAO messages sent to the children
-        self.parents_list = []  # Parent set! (aka a list of parents(neighbors with rank greater than the nodes)) - elements will have the format (neighbor_node_id, neighbor_rank)  
-        self.children_list = [] # Child set! (aka a list of children(neighbors with rank less than the nodes)) - elements will have the format (neighbor_node_id, neighbor_rank)
+        # self.parents_list = []  # Parent set! (aka a list of parents(neighbors with rank greater than the nodes)) - elements will have the format (neighbor_node_id, neighbor_rank)  
+        # self.children_list = [] # Child set! (aka a list of children(neighbors with rank less than the nodes)) - elements will have the format (neighbor_node_id, neighbor_rank)
         self.downward_routes = {} # ROUTING TABLE - dict of downward routes. format: (destination ipv6 address, next_hop ipv6 address)
 
         # TODO der skal måske være noget herinde til at holde alt dodag info fra de andre nodes (info man får i DIO beskederne)(en liste)

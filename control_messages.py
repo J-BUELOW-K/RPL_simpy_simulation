@@ -146,7 +146,7 @@ class DAO:
     #        +-+-+-+-+-+-+-+-+
 
 
-    def __init__(self, rpl_instance_id, dodag_id, dao_sequence = 0, amount_of_targets = 0):
+    def __init__(self, rpl_instance_id, dodag_id, dodag_version, dao_sequence = 0):
         
         self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
         #self.k_flag = k_flag                        # The 'K' flag indicates that the recipient is expected to send a DAO-ACK back. - WE DONT USE
@@ -156,13 +156,11 @@ class DAO:
         self.dao_sequence = dao_sequence            # Incremented at each unique DAO message from a node and echoed in the DAO-ACK message.
         self.dodag_id = dodag_id                    # TODO Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
                                                     # present when the 'D' flag is set.
-        self.amount_of_targets = amount_of_targets  # Amount of targets in the DAO message options. note: THIS IS NOT A PART OF THE STANDARD
+        self.dodag_version = dodag_version          # note: THIS IS NOT A PART OF THE STANDARD. we added it to simplify the implementation
+        #self.amount_of_targets = amount_of_targets  # Amount of targets in the DAO message options. note: THIS IS NOT A PART OF THE STANDARD
     
     # All fields included, however not all are necessarily used.
     # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.4
-
-    def add_rpl_target(self, target_prefix: int, target_prefix_len: int):
-        self.opt.append(RPL_target(target_prefix, target_prefix_len))
 
  
 # We do not implement the DAO_ACK in this project.
@@ -298,9 +296,9 @@ class ICMP_DIO:
 
 
 class ICMP_DAO:
-    def __init__(self, rpl_instance_id: int, dodag_id, dao_sequence = 0, amount_of_targets = 0) -> None:
+    def __init__(self, rpl_instance_id: int, dodag_id, dodag_version, dao_sequence = 0, amount_of_targets = 0) -> None:
         self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DAO)
-        self.dao = DAO(rpl_instance_id, dodag_id, dao_sequence, amount_of_targets)
+        self.dao = DAO(rpl_instance_id, dodag_id, dodag_version, dao_sequence)
         self.targets = []
         
     def add_target(self, target_prefix, prefix_len):

@@ -103,8 +103,14 @@ class Node:
         self.ipv6_address_prefix_len = defines.IPV6_ADDRESS_PREFIX_LEN # ipv6 address prefix length
 
     def add_to_neighbors_list(self, neighbor_object, connection_object): # add a single neighbor to the self.neighbors list
-        self.neighbors.append((neighbor_object, connection_object))
+        self.neighbors.append((neighbor_object, connection_object, None)) # None is a placeholder for the ipv6 address. This will be updated when a DIO message is recieved
         pass
+
+    def find_ipv6_address(self, node_id):
+        for neighbor in self.neighbors:
+            if neighbor[0].node_id == node_id:
+                return neighbor[2]
+        return None
 
     def increment_metric_object_from_neighbor(self, neighbors_metric_object, neighbors_node_id): # helper function used to increment a metric object recieved from a neighbor - to include path from neighbor to this node
         #print(f"debug: nabo objekt:{neighbors_metric_object}")
@@ -118,6 +124,11 @@ class Node:
                     neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
         return neighbors_metric_object
                     
+    def unicast_packet(self, destination, packet): # Destination must be the receiving node_id
+        # Unicast a message to a neighbor
+        for neighbor in self.neighbors:
+            if neighbor[0].node_id == destination:
+                neighbor[0].input_msg_queue.put(packet)
 
     def broadcast_packet(self, packet):
         # broadcast packet to all neighbors 
@@ -127,7 +138,8 @@ class Node:
     def broadcast_all_dios(self): # for all the dodags, broadcast dio messages
         for instance in self.rpl_instances:
             for dodag in instance.dodag_list:
-                icmp_dio = ICMP_DIO(instance.rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
+                icmp_dio = ICMP_DIO(instance.rpl_instance_id, dodag.dodag_version_num, dodag.rank, 
+                                    dodag.dodag_id, prefix=self.ipv6_address, prefix_len=self.ipv6_address_prefix_len) # DIO message with icmp header
                 if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
                     icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
                     pass
@@ -137,28 +149,26 @@ class Node:
                 packet = Packet(self.node_id, icmp_dio)
                 self.broadcast_packet(packet)
         
-    def broadcast_packet_to_parents(self, packet, dodag: Dodag):
-        parents_ids = [parent[0] for parent in dodag.parents_list]  # parent[0] = node_id of parent
-        for neighbor in self.neighbors:
-            if neighbor.node_id in parents_ids:
-                neighbor[0].input_msg_queue.put(packet)   
+    # def broadcast_packet_to_parents(self, packet, dodag: Dodag): # TODO VI SKAL KUN PREFERD PARENTS IKKE ALL PARENTS
+    #     parents_ids = [parent[0] for parent in dodag.parents_list]  # parent[0] = node_id of parent
+    #     for neighbor in self.neighbors:
+    #         if neighbor.node_id in parents_ids:
+    #             neighbor[0].input_msg_queue.put(packet)   
 
-    def broadcast_all_daos(self): # for all the dodags, send a dao message to all the nodes parents (aka. "broadcast" here only referer to the parent set)
+    def send_all_daos(self): # for all the dodags, send a dao message to the preferred parent
         for instance in self.rpl_instances:
             for dodag in instance.dodag_list:
                 dodag.dao_sequence += 1  #increment dao_seqence (acording to the standard - see section 9.3 (point 1) in RFC 6550)
-                icmp_dao = ICMP_DAO(instance.rpl_instance_id, dodag.dao_sequence, dodag.dodag_id)
-                # TODO MANGLER AT TILFØJE TARGET OPTIONS (HENT DATA FRA DODAGENS ROUTING TABLE)
-                for child in dodag.child_list:
-                    #icmp_dao.add_rpl_target()
-                    # TODO 
-                    # FJERN PARENT_list og CHILD_list og det, hvis vi ikke bruger dem aligevel
-                    pass
+                icmp_dao = ICMP_DAO(instance.rpl_instance_id, dodag.dodag_id, dodag.dodag_version_num, dodag.dao_sequence)
+                icmp_dao.add_target(self.ipv6_address, self.ipv6_address_prefix_len)   # add the node itself as a target in the DAO message
+                for dest_ipv6_address in dodag.downward_routes.keys(): # add all the downward routes as targets in the DAO message
+                    icmp_dao.add_target(dest_ipv6_address, defines.IPV6_ADDRESS_PREFIX_LEN)
+
                 packet = Packet(self.node_id, icmp_dao)
-                self.broadcast_packet_to_parents(packet, dodag)
+                self.unicast_packet(dodag.prefered_parent, packet)
 
     
-    def dio_handler(self, senders_node_id, dio_message: ICMP_DIO, senders_metric_object = None, senders_prefix_info: Prefix_info = None):
+    def dio_handler(self, senders_node_id, dio_message: DIO, senders_metric_object = None, senders_prefix_info: Prefix_info = None):
         # see section 8 in RPL standarden (RFC 6550) 
 
         ####################  Find RPL Instance and Dodag in the nodes self.rpl_instaces list - If no entries, we create them ####################
@@ -189,11 +199,11 @@ class Node:
         dodag_reference.surrounding_dodags.update({senders_node_id: self.env.now}) # update timestamp for the recieved dodag
         #print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")
 
-        ####################  Extract IPV6 address from senders_prefix_info #################### 
+        ####################  Extract and save IPV6 address from senders_prefix_info #################### 
         if senders_prefix_info is not None:
              for neighbor in self.neighbors:
                 if neighbor[0].node_id == senders_node_id:
-                    neighbor[2] = senders_prefix_info.prefix
+                    neighbor = (neighbor[0], neighbor[1], senders_prefix_info.prefix) # update prefix info
                     # we dont actually care about the prefix length... we know its a link local address... so we simply ignore it...
                     break
 
@@ -222,45 +232,40 @@ class Node:
                     dodag_reference.rank = winner_rank # we can just use the rank computed from of0_compare_parent - we dont have to compute it again
             
 
-        ####################  EVALUATE PARENT SET  ####################
+        # ####################  EVALUATE PARENT SET  ####################
 
-        # add neighbor to parent list if not already there (if the neighbor is not a parent, it will be removed afterwards):
-        already_in_parents_list = False
-        for parent in dodag_reference.parents_list:
-            if parent[0] == senders_node_id:
-                # we already have an entry for this parent in the parent list
-                parent = (senders_node_id, dio_message.rank) # update rank
-                already_in_parents_list = True
-                break
-        if not already_in_parents_list: # if we dont already have an entry for this parent in the parent list
-            dodag_reference.parents_list.append((senders_node_id, dio_message.rank))
+        # # add neighbor to parent list if not already there (if the neighbor is not a parent, it will be removed afterwards):
+        # already_in_parents_list = False
+        # for parent in dodag_reference.parents_list:
+        #     if parent[0] == senders_node_id:
+        #         # we already have an entry for this parent in the parent list
+        #         parent = (senders_node_id, dio_message.rank) # update rank
+        #         already_in_parents_list = True
+        #         break
+        # if not already_in_parents_list: # if we dont already have an entry for this parent in the parent list
+        #     dodag_reference.parents_list.append((senders_node_id, dio_message.rank))
 
-        # remove alle non-parents from the parent list :
-        dodag_reference.parents_list = [parent for parent in dodag_reference.parents_list if parent[1] < dodag_reference.rank] # parent[1] = parent rank
-
-
-        ####################  EVALUATE CHILD SET ####################'
-
-        already_in_children_list = False
-        for child in dodag_reference.children_list:
-            if child[0] == senders_node_id:
-                # we already have an entry for this child in the child list
-                child = (senders_node_id, dio_message.rank) # update rank
-                already_in_children_list = True
-                break
-        if not already_in_children_list: # if we dont already have an entry for this child in the child list
-            dodag_reference.children_list.append((senders_node_id, dio_message.rank))
-
-        # remove alle non-children from the child set:
-        dodag_reference.children_list = [child for child in dodag_reference.children_list if child[1] > dodag_reference.rank]
+        # # remove alle non-parents from the parent list :
+        # dodag_reference.parents_list = [parent for parent in dodag_reference.parents_list if parent[1] < dodag_reference.rank] # parent[1] = parent rank
 
 
+        # ####################  EVALUATE CHILD SET ####################'
 
-        # # add neighbor to child set (if the neighbor is not a child, it will be removed afterwards):
-        # dodag_reference.children_list.append((senders_node_id, dio_message.rank))
+        # already_in_children_list = False
+        # for child in dodag_reference.children_list:
+        #     if child[0] == senders_node_id:
+        #         # we already have an entry for this child in the child list
+        #         child = (senders_node_id, dio_message.rank) # update rank
+        #         already_in_children_list = True
+        #         break
+        # if not already_in_children_list: # if we dont already have an entry for this child in the child list
+        #     dodag_reference.children_list.append((senders_node_id, dio_message.rank))
 
         # # remove alle non-children from the child set:
-        # dodag_reference.children_list = [child for child in dodag_reference.children_list if child[1] < dodag_reference.rank] # child[1] = child rank
+        # dodag_reference.children_list = [child for child in dodag_reference.children_list if child[1] > dodag_reference.rank]
+
+
+
 
 
         # 8.1.  DIO Base Rules
@@ -299,7 +304,7 @@ class Node:
         #    may be a set of multiple parents if those parents are equally
         #    preferred and have identical Rank.
 
-    def dao_handler(self, senders_node_id, dao_message: ICMP_DAO, senders_targets: list[RPL_target]):
+    def dao_handler(self, senders_node_id, dao_message: DAO, senders_targets: list[RPL_target]):
 
         # A dao was received from a child node.
         # Aka, this node is the preferred parent of the sender of the dao message (we only send dao messages to preferred parents)
@@ -313,7 +318,7 @@ class Node:
 
         ####################  MAKE SURE DAO IS ASSOCIATED WITH A VALID DODAG  ####################
 
-        rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, dao_message.rpl_instance_id, dao_message.dodag_id, dao_message.version)
+        rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, dao_message.rpl_instance_id, dao_message.dodag_id, dao_message.dodag_version)
 
         if rpl_instance_idx is None or dodag_list_idx is None:
             return # invalid DAO message - ignore it
@@ -325,21 +330,17 @@ class Node:
         for child in dodag_reference.children_dao_seq_list:
             if child[0] == senders_node_id:
                 # we already have an entry for this child in the children_dao_seq_list
-                if dao_message.dao_seq_num <= child[1]:
+                if dao_message.dao_sequence <= child[1]:
                     return # message is outdated - ignore it
-                child = (senders_node_id, dao_message.dao_seq_num) # update seq number
+                child = (senders_node_id, dao_message.dao_sequence) # update seq number
                 child_already_in_dao_seq_list = True
                 break
         if not child_already_in_dao_seq_list: # if we dont already have an entry for this child in the children_dao_seq_list
-            dodag_reference.children_dao_seq_list.append((senders_node_id, dao_message.dao_seq_num))
+            dodag_reference.children_dao_seq_list.append((senders_node_id, dao_message.dao_sequence))
 
         #################### GET IPV6 ADDRESS OF SENDER ####################
 
-        senders_ipv6_address = None
-        for neighbor in self.neighbors:
-            if neighbor[0].node_id == senders_node_id:
-                senders_ipv6_address = neighbor[2]
-                break
+        senders_ipv6_address = self.find_ipv6_address(senders_node_id)
         if senders_ipv6_address is None:
             return # invalid DAO message (we have not yet received its ivp6 address from a DIO message) - ignore it
 
@@ -362,7 +363,7 @@ class Node:
             self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.metric_option, packet.payload.prefix_option)
             pass # TODO
         elif icmp_header.code == defines.CODE_DAO:
-            self.dao_handler(packet.src_node_id, packet.payload.dao, packet.payload.rpl_targets)
+            self.dao_handler(packet.src_node_id, packet.payload.dao, packet.payload.targets)
             pass 
         elif icmp_header.code == defines.CODE_DIS:
             pass # TODO
@@ -378,12 +379,11 @@ class Node:
             else: # if silent_mode = False
                 event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
-                    # broadcast_dio() # TODO - NODEN SKAL VEL BROADCASTE ALLE DENS DODAGS TIL ALLE DENS CONNECTIONS
-                    # print("debug: Node: timeout!") TODO fjerne udkommenteringen
-                    self.broadcast_all_dios()
-                    # TODO send DAOs to preferred parent. 
                     # note: acording to the standard, a node sends a DAO if i recieves a DAO (after DAO_DELAY) or if it has updates to its downward routes. 
                     #       however, for simplicity, we simpy send a DAO using a periodic timer (just like we do for DIOs)
+                    self.broadcast_all_dios()
+                    self.send_all_daos() # send DAOs to preferred parent  
+
                     pass
                 else: # event was a "message in input_msg_queue" event
                     # TODO HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
@@ -513,8 +513,8 @@ class Network:
         # for node in self.nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
 
-        for node in self.nodes:
-            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, parents_list: {node.rpl_instances[0].dodag_list[0].parents_list}, children_list: {node.rpl_instances[0].dodag_list[0].children_list}, ")
+        # for node in self.nodes:
+        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, parents_list: {node.rpl_instances[0].dodag_list[0].parents_list}, children_list: {node.rpl_instances[0].dodag_list[0].children_list}, ")
 
         dpi = 200
         fig_width = 10
