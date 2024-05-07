@@ -109,6 +109,7 @@ class Node:
     def find_ipv6_address(self, node_id):
         for neighbor in self.neighbors:
             if neighbor[0].node_id == node_id:
+                print(f"debug: FILUR {neighbor[2]}")
                 return neighbor[2]
         return None
 
@@ -146,6 +147,7 @@ class Node:
                 elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
                     icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
                     pass
+                print(f"debug: pepsi: {icmp_dio.prefix_option.prefix}  .... {self.ipv6_address}")
                 packet = Packet(self.node_id, icmp_dio)
                 self.broadcast_packet(packet)
         
@@ -201,12 +203,10 @@ class Node:
 
         ####################  Extract and save IPV6 address from senders_prefix_info #################### 
         if senders_prefix_info is not None:
-             for neighbor in self.neighbors:
+            for i, neighbor in enumerate(self.neighbors):
                 if neighbor[0].node_id == senders_node_id:
-                    neighbor = (neighbor[0], neighbor[1], senders_prefix_info.prefix) # update prefix info
-                    # we dont actually care about the prefix length... we know its a link local address... so we simply ignore it...
+                    self.neighbors[i] = (neighbor[0], neighbor[1], senders_prefix_info.prefix) # update prefix info
                     break
-
 
         ####################  CHECK IF SENDER IS A BETTER PREFERRED PARENT THAN THE CURRENT PREFERRED PARRENT - UPDATE STUFF IF IT IS ####################
 
@@ -321,6 +321,7 @@ class Node:
         rpl_instance_idx, dodag_list_idx = find_dodag(self.rpl_instances, dao_message.rpl_instance_id, dao_message.dodag_id, dao_message.dodag_version)
 
         if rpl_instance_idx is None or dodag_list_idx is None:
+            print("debug okay 1")
             return # invalid DAO message - ignore it
         dodag_reference = self.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx]
 
@@ -331,6 +332,7 @@ class Node:
             if child[0] == senders_node_id:
                 # we already have an entry for this child in the children_dao_seq_list
                 if dao_message.dao_sequence <= child[1]:
+                    print("debug okay 2")
                     return # message is outdated - ignore it
                 child = (senders_node_id, dao_message.dao_sequence) # update seq number
                 child_already_in_dao_seq_list = True
@@ -342,11 +344,14 @@ class Node:
 
         senders_ipv6_address = self.find_ipv6_address(senders_node_id)
         if senders_ipv6_address is None:
+            print("debug okay 3")
             return # invalid DAO message (we have not yet received its ivp6 address from a DIO message) - ignore it
 
         #################### UPDATE DOWNWARD ROUTES  ####################
 
+        
         for target in senders_targets: # go through all the targets in the DAO message
+            print("debug: target: ", target.target_prefix)
             dodag_reference.downward_routes[target.target_prefix] = senders_ipv6_address  # this will update the route if it already exists, or create a new one if it does not
 
 
@@ -363,6 +368,7 @@ class Node:
             self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.metric_option, packet.payload.prefix_option)
             pass # TODO
         elif icmp_header.code == defines.CODE_DAO:
+            #print(f"TRÆ: {packet.payload.targets[0].target_prefix}")
             self.dao_handler(packet.src_node_id, packet.payload.dao, packet.payload.targets)
             pass 
         elif icmp_header.code == defines.CODE_DIS:
@@ -383,7 +389,6 @@ class Node:
                     #       however, for simplicity, we simpy send a DAO using a periodic timer (just like we do for DIOs)
                     self.broadcast_all_dios()
                     self.send_all_daos() # send DAOs to preferred parent  
-
                     pass
                 else: # event was a "message in input_msg_queue" event
                     # TODO HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
@@ -515,6 +520,9 @@ class Network:
 
         # for node in self.nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, parents_list: {node.rpl_instances[0].dodag_list[0].parents_list}, children_list: {node.rpl_instances[0].dodag_list[0].children_list}, ")
+
+        for node in self.nodes:
+            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, downward_routes: {node.rpl_instances[0].dodag_list[0].downward_routes} ")
 
         dpi = 200
         fig_width = 10

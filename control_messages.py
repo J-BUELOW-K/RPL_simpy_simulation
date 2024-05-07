@@ -19,8 +19,8 @@ import defines
 class RPL_target:
     def __init__(self, target_prefix, prefix_len):
         self.option_type = 0x05
-        self.prefix_len = 0
-        self.target_prefix = None  # identifying an IPv6 destination address. 
+        self.prefix_len = prefix_len
+        self.target_prefix = target_prefix  # identifying an IPv6 destination address. 
                                    # The bits in the prefix after the prefix length (if any) are
                                    # reserved and MUST be set to zero on transmission and MUST be
                                    # ignored on receipt.
