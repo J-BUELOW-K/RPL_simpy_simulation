@@ -530,7 +530,6 @@ class Network:
         G = nx.DiGraph(edges)
         poss = graphviz_layout(G, prog="dot") 
         flipped_poss = {node: (x,-y) for (node, (x,y)) in poss.items()}
-        print(flipped_poss)
 
         color_map = []
         for nodex in G.nodes():
