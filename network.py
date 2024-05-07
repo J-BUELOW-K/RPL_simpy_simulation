@@ -8,9 +8,9 @@ import math
 from dodag import Rpl_Instance, Dodag, generate_linklocal_ipv6_address
 from control_messages import *
 from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
-import defines
-from defines import METRIC_OBJECT_TYPE, METRIC_OBJECT_NONE, METRIC_OBJECT_HOPCOUNT, METRIC_OBJECT_ETX, NODE_TRANSMIT_TIMER, NODE_TRANSMIT_TIMER_JITTER
+from defines import *
 from networkx.drawing.nx_agraph import graphviz_layout
+
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
@@ -79,12 +79,13 @@ class Node:
     #    hmm... men i Process Communication example yielder de ikke på put. det kommer nok an på om man vil sidde stuck indtil den er sendt, eller bare komme videre idk
     # Problem. hvordan tingår en node andre nodes input queues. er det ikke kun noget netwærk objektet kan?? tænk over det
 
-    def __init__(self, env, nw, node_id, xpos, ypos):
+    def __init__(self, env, nw, node_id, xpos, ypos, alive = True):
 
         # Physical network values:
         self.network = nw
         self.env = env
         self.node_id = node_id
+        self.alive = alive
         self.xpos = xpos  # used to estimate ETX
         self.ypos = ypos  # used to estimate ETX
         self.neighbors = [] # Each element is a tuple: (node object, connection object, link local ipv6 address).   
@@ -198,7 +199,6 @@ class Node:
         ####################  Update timestamp for the recieved dodag  ####################  
         dodag_reference.last_dio = self.env.now # update timestamp for the recieved dodag (used in OF0)
         dodag_reference.surrounding_dodags.update({senders_node_id: self.env.now}) # update timestamp for the recieved dodag
-        #print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")
 
         ####################  Extract and save IPV6 address from senders_prefix_info #################### 
         if senders_prefix_info is not None:
@@ -356,14 +356,13 @@ class Node:
         # Read ICMP Header:
         #print(f"yesdu: {packet}")
         icmp_header = packet.payload.icmp
-        if icmp_header.type != defines.TYPE_RPL_CONTOL_MSG:
+        if icmp_header.type != TYPE_RPL_CONTOL_MSG:
             # invalid packet - ignore it
             return
         if icmp_header.code == defines.CODE_DIO:
             self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.metric_option, packet.payload.prefix_option)
             pass # TODO
         elif icmp_header.code == defines.CODE_DAO:
-            #print(f"TRÆ: {packet.payload.targets[0].target_prefix}")
             self.dao_handler(packet.src_node_id, packet.payload.dao, packet.payload.targets)
             pass 
         elif icmp_header.code == defines.CODE_DIS:
@@ -461,12 +460,12 @@ class Network:
                 raise ValueError 
             else:
                 # Create DODAG in root node, within the already existing RPL Instance
-                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=defines.ROOT_RANK) # setting rank to 0 makes the node the root!
+                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=ROOT_RANK) # setting rank to 0 makes the node the root!
                 root_node.rpl_instances[rpl_instance_idx].add_dodag(new_dodag)
         else:
             # No matching RPL entry exists in root node - create one! (including dodag):
             new_rpl_instance = Rpl_Instance(rpl_instance_id)
-            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
+            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = ROOT_RANK) # setting rank to 0 makes the node the root!
             new_rpl_instance.add_dodag(new_dodag)
             root_node.rpl_instances.append(new_rpl_instance)
 
@@ -492,23 +491,25 @@ class Network:
             env.process(node.run(env))
     
     def plot(self):
-        pos = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
-        nx.draw_networkx_edges(self.networkx_graph, pos)
-        nx.draw_networkx_nodes(self.networkx_graph, pos, node_size=80)
+        poss = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
+        color_map = ['tab:olive' if i == 0 else 'tab:blue' for i in range(len(self.networkx_graph.nodes()))]
+
+        nx.draw_networkx_edges(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE)
+        nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE, node_color=color_map)
 
         # Draw ETX edge labels:
         # etx_labels = {}
         # for connection in self.connections:
         #     etx_labels[(connection.from_node, connection.to_node)] =  round(connection.etx_value) #FORKERT!!!  VÆRDIERENE ER KORREKT SAT I PLOTTET
         # nx.draw_networkx_edge_labels(self.networkx_graph, pos, edge_labels=etx_labels, font_size = 6)#verticalalignment="baseline")
-
+        plt.title("Network")
         plt.show()
 
 
     # TODO nævn i raport at hver node ikke vil have information om hvordan alle node i en dodag er forbundet da dette ville 
     # kræve en del lagerplads.
 
-    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr=""): # input: rpl instance, dodag id og dodag version  
+    def plot_resulting_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr = "", show = True, save = False): # input: rpl instance, dodag id og dodag version  
 
         # for node in self.nodes:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
@@ -519,10 +520,10 @@ class Network:
         for node in self.nodes:
             print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, downward_routes: {node.rpl_instances[0].dodag_list[0].downward_routes} ")
 
-        dpi = 200
-        fig_width = 10
-        fig_height = 10
-        fig = plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
+        #dpi = 200
+        #fig_width = 10
+        #fig_height = 10
+        #fig = plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
 
         if len(self.nodes) == 0:
             raise ValueError("No nodes in network")
@@ -531,38 +532,49 @@ class Network:
         # problemet: Jeg finder og bruger indexer for rpl og dodag listerne baserede på 1 node som er hard coded og brugt til alle.
         rpl_instances = self.nodes[0].rpl_instances
         rpl_instance_idx, dodag_list_idx = find_dodag(rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version) # return index of dodag and/or rpl instance in list of rpl instances
-
         if (rpl_instance_idx == None) or (dodag_list_idx == None):
             raise ValueError("No Dodag to print with the provided IDs and version.")
-        
-        # Sort the list of node objects into numerical order for the nodes' ranks. 
-        try:
-            sorted_nodes = sorted(self.nodes, key=lambda node: node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
-        except IndexError:
-            print(f"rpl_instance_idx: {rpl_instance_idx}, dodag_list_idx: {dodag_list_idx}")
-            sorted_nodes = self.nodes # if the nodes are not sorted, just use the original list
-            pass
 
         # set up a list containing all edges.
         edges = []
-        for node in sorted_nodes[1:]:
+        for node in self.nodes[1:]:
             child = node.node_id
             parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
             edges.append((child, parent))
-
+       
         # plot the DODAG using networkx and graphviz
-        G = nx.DiGraph(edges,)
-        pos = graphviz_layout(G, prog="dot")
-        flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
-        nx.draw(G, flipped_pos, with_labels = True, node_size=350)
-        
+        G = nx.DiGraph(edges)
+        poss = graphviz_layout(G, prog="dot") 
+        flipped_poss = {node: (x,-y) for (node, (x,y)) in poss.items()}
+        print(flipped_poss)
+
+        color_map = []
+        for nodex in G.nodes():
+            for node in self.nodes:
+                rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
+                if node.node_id == nodex:
+                    if node.alive:
+                        color_map.append('tab:olive' if rank == ROOT_RANK else 'tab:blue')
+                    else:
+                        color_map.append('tab:red')
+
+        nx.draw_networkx_edges(G, flipped_poss, node_size=DODAG_NODE_SIZE)
+        nx.draw_networkx_nodes(G, flipped_poss, node_size=DODAG_NODE_SIZE, node_color=color_map)
+        nx.draw_networkx_labels(G, flipped_poss, font_size=LABLE_SIZE)
+
+
+        # nx.draw(G, flipped_poss, with_labels = True, node_size=250, node_color=color_map, font_size=6, width=.7, arrowsize=7)
         
         plt.title("Dodag")
-        plt.savefig(f"Graph{nr}.jpg", format="JPG", dpi=dpi)
-        if nr == "":
+        if save is True:
+            plt.savefig(f"Graph{nr}.jpg", format="JPG", dpi=200)
+    
+        if show is True:
             plt.show()
         else:
             plt.close()
+        
+
 
     def at_interval_plot(self, rpl_instance_id, dodag_id, dodag_version, interval):
         idx = 0

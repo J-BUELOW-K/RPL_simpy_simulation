@@ -46,5 +46,9 @@ IPV6_GLOBAL_UCAST_NETWORK_PREFIX = "2001:db8:0:1" # (subnet is simply set to 1)
 """Link Local IPv6 Address defines"""
 IPV6_ADDRESS_PREFIX_LEN = 64
 IPV6_ADDRESS_PREFIX_HEX_LEN = 16 # (64 bits = 16 hex characters)
-IPV6_ADDRESS_HEX_LEN = 32 # (128 bits = 32 hex characters)
+IPV6_ADDRESS_HEX_LEN = 32 # (128 bits = 32 hex characters) 
 
+"""Network and dodag plotting setting"""
+DODAG_NODE_SIZE = 150
+NETWORK_NODE_SIZE = 80
+LABLE_SIZE = 7
