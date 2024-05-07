@@ -502,10 +502,7 @@ class Network:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, DAGRank: {DAGRank(node.rpl_instances[0].dodag_list[0].rank)}, rank: {node.rpl_instances[0].dodag_list[0].rank}, CUMU_ETX: {node.rpl_instances[0].dodag_list[0].metric_object.cumulative_etx} ")
 
         dpi = 200
-        fig_width = 5
-        fig_height = 5
-        color_map = []
-        plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
+        plt.figure(dpi=dpi)
 
         if len(self.nodes) == 0:
             raise ValueError("No nodes in network")
@@ -517,18 +514,10 @@ class Network:
 
         if (rpl_instance_idx == None) or (dodag_list_idx == None):
             raise ValueError("No Dodag to print with the provided IDs and version.")
-        
-        # Sort the list of node objects into numerical order for the nodes' ranks. 
-        try:
-            sorted_nodes = sorted(self.nodes, key=lambda node: node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank)
-        except IndexError:
-            print(f"rpl_instance_idx: {rpl_instance_idx}, dodag_list_idx: {dodag_list_idx}")
-            sorted_nodes = self.nodes # if the nodes are not sorted, just use the original list
-            pass # TODO måske giver dette problemer og måske er det unødvendigt
 
         # set up a list containing all edges.
         edges = []
-        for node in sorted_nodes[1:]:
+        for node in self.nodes[1:]:
             child = node.node_id
             parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
             edges.append((child, parent))
@@ -538,26 +527,17 @@ class Network:
         pos = graphviz_layout(G, prog="dot")
         flipped_pos = {node: (x,-y) for (node, (x,y)) in pos.items()}
 
-        print(sorted_nodes.nodes)
-
-     # Create node color map
-        for node in sorted_nodes:
-            # node.alive = random.choice([True, False])
-            rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
-            node_id = node.node_id
-            print(node_id)
-            if node.alive is True:
-                if rank == defines.ROOT_RANK:
-                    color_map.append('tab:olive')
-                else:
-                    color_map.append('tab:blue')
-            elif node.alive is False:
-                color_map.append('tab:red')
-        
-        # print(color_map)
+        color_map = []
+        for nodex in G.nodes():
+            for node in self.nodes:
+                rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
+                if node.node_id == nodex:
+                    if node.alive:
+                        color_map.append('tab:olive' if rank == defines.ROOT_RANK else 'tab:blue')
+                    else:
+                        color_map.append('tab:red')
 
         nx.draw(G, flipped_pos, with_labels = True, node_size=350, node_color=color_map)
-        
         
         plt.title("Dodag")
         if save is True:
