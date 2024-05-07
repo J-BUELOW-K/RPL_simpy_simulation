@@ -14,6 +14,7 @@ NUMBER_OF_NODES = 50
 RADIUS = 0.2
 
 NODE_TRANSMIT_TIMER = 5 # Periodic transmit timer - in simpy time units
+NODE_TRANSMIT_TIMER_JITTER = 2 # Jitter for the periodic transmit timer - in simpy time units  VERY IMPORTANT! WITHOUT JITTER, ALL NODES WILL TRANSMIT AT THE SAME TIME WHICH WILL BREAKS STUFF
 
 """dodag defines"""
 ROOT_RANK = 0
