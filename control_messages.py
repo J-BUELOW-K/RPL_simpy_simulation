@@ -37,7 +37,7 @@ class ICMP_header:
 
 
 
-""" DIO, DAO and DAO ACK body implementations """
+""" DIS, DIO, DAO and DAO ACK body implementations """
 
 class DIO:
 
@@ -187,7 +187,20 @@ class DAO_ACK:
     # Object are implemented. 
 
 
+class DIS:
 
+    """DODAG Information Solicitation"""
+
+    # 0                   1                   2
+    #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |     Flags     |   Reserved    |   Option(s)...
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    def __init__(self, opt = None):
+        self.opt = opt
+
+    # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.2
 
 """ DAG Metric Container implementations """
 
@@ -276,6 +289,13 @@ class ICMP_DAO_ACK:
 
     def __init__(self) -> None:
         pass
+
+class ICMP_DIS:
+
+    def __init__(self, opt = None):
+        self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIS)
+        self.dis = DIS(opt=opt)
+        self.option = None
 
 """ Packet implementation """
 
