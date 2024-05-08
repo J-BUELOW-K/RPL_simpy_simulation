@@ -104,6 +104,42 @@ class Node:
         self.ipv6_address = generate_linklocal_ipv6_address(node_id) # link local ipv6 address of the node (excluding \[prefix length])
         self.ipv6_address_prefix_len = defines.IPV6_ADDRESS_PREFIX_LEN # ipv6 address prefix length
 
+    def kill_node(self):
+        self.alive = False
+    
+    def revive_node(self):
+        self.alive = True
+    
+    def determine_if_to_kill_or_revive(self):
+        for rpl in self.rpl_instances:
+            for dodag in rpl.dodag_list:
+                if dodag.rank == defines.ROOT_RANK:
+                    return "nothing" # dont kill the root node
+        change = False
+        if self.alive:
+            if random.random() < NODE_KILL_PROBABILITY:
+                self.kill_node()
+                change = True
+        if not change and not self.alive:
+            if random.random() < NODE_REVIVE_PROBABILITY:
+                self.revive_node()
+                change = True
+        
+        # if change:
+        #     for rpl in self.rpl_instances:
+        #         for dodag_instance in rpl.dodag_list:
+        #             if not self.alive:
+                        
+        #                     dodag_instance.prefered_parent = None
+        #                     dodag_instance.prefered_parent_rank = defines.INFINITE_RANK
+        #                     dodag_instance.rank = defines.INFINITE_RANK
+                
+
+        return "nothing"
+        
+        
+        
+    
     def add_to_neighbors_list(self, neighbor_object, connection_object): # add a single neighbor to the self.neighbors list
         self.neighbors.append((neighbor_object, connection_object, None)) # None is a placeholder for the ipv6 address. This will be updated when a DIO message is recieved
         pass
@@ -381,13 +417,17 @@ class Node:
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                     # note: acording to the standard, a node sends a DAO if i recieves a DAO (after DAO_DELAY) or if it has updates to its downward routes. 
                     #       however, for simplicity, we simpy send a DAO using a periodic timer (just like we do for DIOs)
-                    self.broadcast_all_dios()
-                    self.send_all_daos() # send DAOs to preferred parent  
+                    self.determine_if_to_kill_or_revive() # simulate node death/revival
+                    if self.alive:
+                        self.broadcast_all_dios()
+                        self.send_all_daos() # send DAOs to preferred parent  
                     pass
                 else: # event was a "message in input_msg_queue" event
                     # TODO HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
                     # print("debug: Node:: packet recieved!") TODO fjerne udkommenteringen
-                    self.packet_handler(next(iter(event.values())))
+                    self.determine_if_to_kill_or_revive() # simulate node death/revival
+                    if self.alive:
+                        self.packet_handler(next(iter(event.values())))
                     pass
             
 
@@ -496,6 +536,8 @@ class Network:
 
         nx.draw_networkx_edges(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE)
         nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE, node_color=color_map)
+        plt.legend([ "Connection","Root"])
+        nx.draw_networkx_labels(self.networkx_graph, poss, font_size=LABLE_SIZE)
 
         # Draw ETX edge labels:
         # etx_labels = {}
@@ -519,12 +561,11 @@ class Network:
         # TODO HUSK AT NÅR VI UDSKIFTER ROUTING TABELLERNE PÆNT, FÅ OGSÅ LIGE "/[prefix length]" MED I IPV6 ADRESSEN
 
         for node in self.nodes:
-            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, downward_routes: {node.rpl_instances[0].dodag_list[0].downward_routes} ")
+            try:
+                print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, downward_routes: {node.rpl_instances[0].dodag_list[0].downward_routes} ")
+            except IndexError:
+                print(f"Node {node.node_id}, has no dodag")
 
-        #dpi = 200
-        #fig_width = 10
-        #fig_height = 10
-        #fig = plt.figure(figsize=(fig_width, fig_height), dpi=dpi)
 
         if len(self.nodes) == 0:
             raise ValueError("No nodes in network")
@@ -540,8 +581,11 @@ class Network:
         edges = []
         for node in self.nodes[1:]:
             child = node.node_id
-            parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
-            edges.append((child, parent))
+            try:
+                parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
+                edges.append((child, parent))
+            except IndexError:
+                pass
        
         # plot the DODAG using networkx and graphviz
         G = nx.DiGraph(edges)
@@ -552,12 +596,15 @@ class Network:
         color_map = []
         for nodex in G.nodes():
             for node in self.nodes:
-                rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
-                if node.node_id == nodex:
-                    if node.alive:
-                        color_map.append('tab:olive' if rank == ROOT_RANK else 'tab:blue')
-                    else:
-                        color_map.append('tab:red')
+                try:
+                    rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
+                    if node.node_id == nodex:
+                        if node.alive:
+                            color_map.append('tab:olive' if rank == ROOT_RANK else 'tab:blue')
+                        else:
+                            color_map.append('tab:red')
+                except IndexError:
+                    pass
 
         nx.draw_networkx_edges(G, flipped_poss, node_size=DODAG_NODE_SIZE)
         nx.draw_networkx_nodes(G, flipped_poss, node_size=DODAG_NODE_SIZE, node_color=color_map)
