@@ -56,12 +56,15 @@ class Dodag:
         self.env = env
         self.dodag_version_num = dodag_version_num # 0
         #self.MinHopRankIncrease = MinHopRankIncrease # 256.0
-        self.last_dio = self.env.now # TODO skal være en timestamp. DET SKAL NOK VÆRE EN SIMPY TIME! IKKE "time" TIME env.now er en ting
+        self.last_dio = self.env.now # timestamp of the last DIO message received from the root
         self.prefered_parent = None # node_id of prefered parent
         self.prefered_parent_rank = defines.INFINITE_RANK
 
+        self.secondary_parent = None
+        self.secondary_rank = defines.INFINITE_RANK
+        
         self.rank = rank
-
+        
         self.metric_object = None
         if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
             self.metric_object = control_messages.HP_OBJ(0) # init hopcount to 0

@@ -244,7 +244,7 @@ class Node:
                     break
 
         ####################  CHECK IF SENDER IS A BETTER PREFERRED PARENT THAN THE CURRENT PREFERRED PARRENT - UPDATE STUFF IF IT IS ####################
-
+        # TODO Clean this the fuck up
         if dodag_reference.rank != defines.ROOT_RANK: # (only non-root nodes needs a parent)
             senders_metric_object_copy = copy.deepcopy(senders_metric_object) # create copy to not alter the original.
             metric_object_through_neighbor = self.increment_metric_object_from_neighbor(senders_metric_object_copy, senders_node_id) 
@@ -265,7 +265,20 @@ class Node:
                     dodag_reference.prefered_parent_rank = dio_message.rank
                     dodag_reference.metric_object = metric_object_through_neighbor # update metric object
                     dodag_reference.rank = winner_rank # we can just use the rank computed from of0_compare_parent - we dont have to compute it again
-            
+                if result == "nothing":
+                    if dodag_reference.secondary_parent is None:
+                        dodag_reference.secondary_parent = senders_node_id
+                        dodag_reference.secondary_parent_rank = dio_message.rank
+                        dodag_reference.secondary_metric_object = metric_object_through_neighbor
+                        dodag_reference.secondary_rank = of0_compute_rank(dodag_reference.secondary_parent_rank, dodag_reference.secondary_metric_object)
+                    else:
+                        result, winner_rank = of0_compare_parent(dodag_reference.secondary_parent_rank, dio_message.rank,
+                                                        dodag_reference.secondary_metric_object, metric_object_through_neighbor)
+                        if result =="update parent":
+                            dodag_reference.secondary_parent = senders_node_id
+                            dodag_reference.secondary_parent_rank = dio_message.rank
+                            dodag_reference.secondary_metric_object = metric_object_through_neighbor
+                            dodag_reference.secondary_rank = winner_rank
 
         # ####################  EVALUATE PARENT SET  ####################
 
@@ -545,6 +558,7 @@ class Network:
         #     etx_labels[(connection.from_node, connection.to_node)] =  round(connection.etx_value) #FORKERT!!!  VÆRDIERENE ER KORREKT SAT I PLOTTET
         # nx.draw_networkx_edge_labels(self.networkx_graph, pos, edge_labels=etx_labels, font_size = 6)#verticalalignment="baseline")
         plt.title("Network")
+        plt.savefig("Network.jpg", format="JPG", dpi=200)
         plt.show()
 
 
