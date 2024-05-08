@@ -581,10 +581,10 @@ class Network:
         edges = []
         for node in self.nodes[1:]:
             child = node.node_id
-            try:
+            if node.alive:
                 parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
                 edges.append((child, parent))
-            except IndexError:
+            else:
                 pass
        
         # plot the DODAG using networkx and graphviz
