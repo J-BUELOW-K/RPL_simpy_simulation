@@ -26,7 +26,7 @@ def main():
     # Execute simulation
 
     env.process(nw.at_interval_plot(rpl_instance, dodag_id, dodag_version,100))
-    env.run(until=SIM_TIME) 
+    env.run(until=defines.SIM_TIME) 
 
     nw.print_resulting_routing_tables(rpl_instance, dodag_id, dodag_version)
     #nw.plot_resulting_dodag(rpl_instance, dodag_id, dodag_version)

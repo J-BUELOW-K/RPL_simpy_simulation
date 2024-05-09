@@ -161,10 +161,10 @@ class Node:
             for dodag in instance.dodag_list:
                 icmp_dio = ICMP_DIO(instance.rpl_instance_id, dodag.dodag_version_num, dodag.rank, 
                                     dodag.dodag_id, prefix=self.ipv6_address, prefix_len=self.ipv6_address_prefix_len) # DIO message with icmp header
-                if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+                if defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_HOPCOUNT:
                     icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
                     pass
-                elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
+                elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_ETX:
                     icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
                     pass
                 packet = Packet(self.node_id, icmp_dio)
@@ -413,7 +413,7 @@ class Node:
                 self.silent_mode = False
                 self.packet_handler(message)
             else: # if silent_mode = False
-                event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER + random.randint(-NODE_TRANSMIT_TIMER_JITTER, NODE_TRANSMIT_TIMER_JITTER), value = "timeooout")  # Periodic timer is replacement for tricle timer
+                event = yield self.input_msg_queue.get() | env.timeout(defines.NODE_TRANSMIT_TIMER + random.randint(-defines.NODE_TRANSMIT_TIMER_JITTER, defines.NODE_TRANSMIT_TIMER_JITTER), value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                     # note: acording to the standard, a node sends a DAO if i recieves a DAO (after DAO_DELAY) or if it has updates to its downward routes. 
                     #       however, for simplicity, we simpy send a DAO using a periodic timer (just like we do for DIOs)
