@@ -11,6 +11,10 @@ from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
 from defines import *
 from networkx.drawing.nx_agraph import graphviz_layout
 
+from rich.console import Console
+from rich.table import Table
+from rich.terminal_theme import MONOKAI
+
 
 SPEED_OF_LIGHT = 299792458
 LINK_FREQ = 2.4 * pow(10, 9)  # Hz
@@ -490,7 +494,7 @@ class Network:
         for node in self.nodes:
             env.process(node.run(env))
     
-    def plot(self):
+    def plot_network(self):
         poss = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
         color_map = ['tab:olive' if i == 0 else 'tab:blue' for i in range(len(self.networkx_graph.nodes()))]
 
@@ -518,8 +522,8 @@ class Network:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, parents_list: {node.rpl_instances[0].dodag_list[0].parents_list}, children_list: {node.rpl_instances[0].dodag_list[0].children_list}, ")
         # TODO HUSK AT NÅR VI UDSKIFTER ROUTING TABELLERNE PÆNT, FÅ OGSÅ LIGE "/[prefix length]" MED I IPV6 ADRESSEN
 
-        for node in self.nodes:
-            print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, downward_routes: {node.rpl_instances[0].dodag_list[0].downward_routes} ")
+        # for node in self.nodes:
+        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, downward_routes: {node.rpl_instances[0].dodag_list[0].downward_routes} ")
 
         #dpi = 200
         #fig_width = 10
@@ -574,7 +578,70 @@ class Network:
             plt.show()
         else:
             plt.close()
-        
+    
+
+    def ipv6_addr_2_node_id(self, ipv6_address: str) -> int:
+        for node in self.nodes:
+            if node.ipv6_address == ipv6_address:
+                return node.node_id
+        return None
+
+    # prints routing tabels for all nodes in the network (in the specified dodag) to a .txt file
+    def print_resulting_routing_tables(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, file_name = "routing_tables.txt"): 
+
+        with open(file_name, "wt") as report_file:
+            console = Console(file=report_file)
+
+            for node in self.nodes:
+
+#                table = Table(show_header=True, header_style="bold dark_orange3", show_lines=True)
+                table = Table(show_header=True, header_style="bold dark_orange3") # (header_style dosent work when saving to txt file)
+
+                rpl_instance_idx, dodag_list_idx = find_dodag(node.rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version)
+                if (rpl_instance_idx == None) or (dodag_list_idx == None):
+                    raise ValueError("No Dodag to print with the provided IDs and version.")
+                intance_reference = node.rpl_instances[rpl_instance_idx]
+                dodag_reference = intance_reference.dodag_list[dodag_list_idx]
+
+                table.add_column(f"Node ID: {node.node_id}", style="dim", width=12)
+                table.add_column("Dest. (IPv6)", justify="left")
+                table.add_column("Dest. (ID)", justify="left")
+                table.add_column("Next Hop (IPv6)", justify="left")
+                table.add_column("Next Hop (ID)", justify="left")
+                for dest_ipv6_address in dodag_reference.downward_routes.keys():
+                    table.add_row(
+                        "", 
+                        str(dest_ipv6_address).upper() + "/" + str(defines.IPV6_ADDRESS_PREFIX_LEN), 
+                        str(self.ipv6_addr_2_node_id(dest_ipv6_address)),  
+                        str(dodag_reference.downward_routes[dest_ipv6_address]).upper() + "/" + str(defines.IPV6_ADDRESS_PREFIX_LEN),
+                        str(self.ipv6_addr_2_node_id(dodag_reference.downward_routes[dest_ipv6_address])),  
+                    )
+                console.print(table)
+                #console.save_svg(f"example{node.node_id}.svg", theme=MONOKAI)
+
+
+
+        # table.add_column("Node_id: 3", style="dim", width=12)
+        # table.add_column("Destination IPv6 Prefix", justify="right")
+        # table.add_column("(Destination node_id)", justify="right")
+        # table.add_column("Next Hop", justify="right")
+        # table.add_row(
+        #     "", "Star Wars: The Rise of Skywalker", "$275,000,000"
+        # )
+        # table.add_row(
+        #     "",
+        #     "[red]Solo[/red]: A Star Wars Story",
+        #     "$275,000,000"
+        # )
+        # table.add_row(
+        #     "",
+        #     "Star Wars Ep. VIII: The Last Jedi",
+        #     "$262,000,000",
+        # )
+
+        # console.print(table)
+
+
 
 
     def at_interval_plot(self, rpl_instance_id, dodag_id, dodag_version, interval):
