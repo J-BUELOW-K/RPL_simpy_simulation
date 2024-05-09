@@ -74,13 +74,13 @@ def of0_compute_rank(parent_rank, metric_object = None):
 
     
 #def of0_compare_parent(current_parent: Node, challenger_parent: Node, ICMP_DIO, metric_object_to_challenger = None, metric_object_type = None):
-def of0_compare_parent(current_parent_rank, challenger_parent_rank,
+def of0_compare_parent(current_parent_rank, challenger_rank,
                        metric_object_through_current_parrent = None, metric_object_through_challenger = None):
     # note, "parent" in parameter names means "prefered parent"
 
 
     rank_through_current_parent = of0_compute_rank(current_parent_rank, metric_object_through_current_parrent)
-    rank_through_challenger_parent = of0_compute_rank(challenger_parent_rank, metric_object_through_challenger)
+    rank_through_challenger_parent = of0_compute_rank(challenger_rank, metric_object_through_challenger)
 
     if DAGRank(rank_through_challenger_parent) < DAGRank(rank_through_current_parent):    # only choose challenger parent as new prefered parent IF it results in a better DAGRank (if equal, keep current parent)
         # note, DAGRank() is used when comparing ranks (see RPL standard)
