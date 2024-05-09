@@ -7,7 +7,7 @@ import math
 from dodag import Rpl_Instance, Dodag
 from control_messages import *
 from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
-from defines import *
+import defines
 from networkx.drawing.nx_agraph import graphviz_layout
 
 
@@ -102,11 +102,11 @@ class Node:
 
     def increment_metric_object_from_neighbor(self, neighbors_metric_object, neighbors_node_id): # helper function used to increment a metric object recieved from a neighbor - to include path from neighbor to this node
         #print(f"debug: nabo objekt:{neighbors_metric_object}")
-        if METRIC_OBJECT_TYPE == METRIC_OBJECT_NONE:
+        if defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_NONE:
             return None
-        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+        elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_HOPCOUNT:
             neighbors_metric_object.cumulative_hop_count += 1
-        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
+        elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_ETX:
             for neighbor in self.neighbors:
                 if neighbor[0].node_id == neighbors_node_id:
                     neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
@@ -131,10 +131,10 @@ class Node:
          # NOTE: DEN SKAL VEL BARE BROADACAST DIS TIL ALLE NODESENS GEMLE DDOAGS. MEN DET MÅ SKAL ET LAG LÆNGERE OPPE
 
         icmp_dio = ICMP_DIO(rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
-        if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+        if defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_HOPCOUNT:
             icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
             pass
-        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
+        elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_ETX:
             icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
             pass
         packet = Packet(self.node_id, icmp_dio)
@@ -189,7 +189,7 @@ class Node:
         # print(f"debug: surrounding dodags: {dodag_reference.surrounding_dodags}")  TODO kommenter ind igen
 
         ####################  Root does not want a parent  ####################   
-        if dodag_reference.rank == ROOT_RANK:
+        if dodag_reference.rank == defines.ROOT_RANK:
             return
 
 
@@ -327,17 +327,17 @@ class Node:
         # Read ICMP Header:
         #print(f"yesdu: {packet}")
         icmp_header = packet.payload.icmp
-        if icmp_header.type != TYPE_RPL_CONTOL_MSG:
+        if icmp_header.type != defines.TYPE_RPL_CONTOL_MSG:
             # invalid packet - ignore it
             return
-        if icmp_header.code == CODE_DIO:
+        if icmp_header.code == defines.CODE_DIO:
             self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.option)
             pass # TODO
-        elif icmp_header.code == CODE_DAO:
+        elif icmp_header.code == defines.CODE_DAO:
             pass # TODO
-        elif icmp_header.code == CODE_DAO_ACK:
+        elif icmp_header.code == defines.CODE_DAO_ACK:
             pass # TODO
-        elif icmp_header.code == CODE_DIS:
+        elif icmp_header.code == defines.CODE_DIS:
             pass # TODO
 
 
@@ -349,7 +349,7 @@ class Node:
                 self.silent_mode = False
                 self.packet_handler(message)
             else: # if silent_mode = False
-                event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
+                event = yield self.input_msg_queue.get() | env.timeout(defines.NODE_TRANSMIT_TIMER, value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                     # broadcast_dio() # TODO - NODEN SKAL VEL BROADCASTE ALLE DENS DODAGS TIL ALLE DENS CONNECTIONS
                     # print("debug: Node: timeout!") TODO fjerne udkommenteringen
@@ -455,12 +455,12 @@ class Network:
                 raise ValueError 
             else:
                 # Create DODAG in root node, within the already existing RPL Instance
-                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=ROOT_RANK) # setting rank to 0 makes the node the root!
+                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=defines.ROOT_RANK) # setting rank to 0 makes the node the root!
                 root_node.rpl_instances[rpl_instance_idx].add_dodag(new_dodag)
         else:
             # No matching RPL entry exists in root node - create one! (including dodag):
             new_rpl_instance = Rpl_Instance(rpl_instance_id)
-            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = ROOT_RANK) # setting rank to 0 makes the node the root!
+            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
             new_rpl_instance.add_dodag(new_dodag)
             root_node.rpl_instances.append(new_rpl_instance)
 
@@ -489,8 +489,8 @@ class Network:
         poss = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
         color_map = ['tab:olive' if i == 0 else 'tab:blue' for i in range(len(self.networkx_graph.nodes()))]
 
-        nx.draw_networkx_edges(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE)
-        nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE, node_color=color_map)
+        nx.draw_networkx_edges(self.networkx_graph, poss, node_size=defines.NETWORK_NODE_SIZE)
+        nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=defines.NETWORK_NODE_SIZE, node_color=color_map)
 
         # Draw ETX edge labels:
         # etx_labels = {}
@@ -537,13 +537,13 @@ class Network:
                 rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
                 if node.node_id == nodex:
                     if node.alive:
-                        color_map.append('tab:olive' if rank == ROOT_RANK else 'tab:blue')
+                        color_map.append('tab:olive' if rank == defines.ROOT_RANK else 'tab:blue')
                     else:
                         color_map.append('tab:red')
 
-        nx.draw_networkx_edges(G, flipped_poss, node_size=DODAG_NODE_SIZE)
-        nx.draw_networkx_nodes(G, flipped_poss, node_size=DODAG_NODE_SIZE, node_color=color_map)
-        nx.draw_networkx_labels(G, flipped_poss, font_size=LABLE_SIZE)
+        nx.draw_networkx_edges(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE)
+        nx.draw_networkx_nodes(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, node_color=color_map)
+        nx.draw_networkx_labels(G, flipped_poss, font_size=defines.LABLE_SIZE)
 
 
         # nx.draw(G, flipped_poss, with_labels = True, node_size=250, node_color=color_map, font_size=6, width=.7, arrowsize=7)
