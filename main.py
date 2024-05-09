@@ -1,6 +1,6 @@
 import simpy
 from network import *
-from defines import *
+import defines
 
 
 
@@ -16,12 +16,15 @@ def main():
     # Setup simulation
     env = simpy.Environment()
     nw = Network(env)
-    nw.generate_nodes_and_edges(NUMBER_OF_NODES, RADIUS)
-    nw.plot_network()
+
+    nw.generate_nodes_and_edges(defines.NUMBER_OF_NODES, defines.RADIUS)
+    nw.plot()
+
     nw.register_node_processes(env)
     nw.construct_new_dodag(rpl_instance, dodag_id, dodag_version)
 
     # Execute simulation
+
     env.process(nw.at_interval_plot(rpl_instance, dodag_id, dodag_version,100))
     env.run(until=SIM_TIME) 
 

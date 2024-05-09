@@ -56,13 +56,11 @@ class ICMP_header:
         # Checksum and options not included. Base field is implemented at a higher level.
         # Refer https://datatracker.ietf.org/doc/html/rfc6550#section-6
 
-        # TODO Check for ICMP type = 155 in message handler
-        # TODO Check ICMP code. If unknown, the discard. 
 
 
 
 
-""" DIO, DAO and DAO ACK body implementations """
+""" DIS, DIO, DAO and DAO ACK body implementations """
 
 class DIO:
 
@@ -210,7 +208,20 @@ class DAO:
 #     # Object are implemented. 
 
 
+class DIS:
 
+    """DODAG Information Solicitation"""
+
+    # 0                   1                   2
+    #     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    #    |     Flags     |   Reserved    |   Option(s)...
+    #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    def __init__(self, opt = None):
+        self.opt = opt
+
+    # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.2
 
 """ DAG Metric Container implementations """
 
@@ -272,6 +283,13 @@ class Prefix_info:
 
 """ ICMP implementations """
 
+class ICMP_DIS:
+
+    def __init__(self, opt = None):
+        self.icmp = ICMP_header(type = defines.TYPE_RPL_CONTOL_MSG, code = defines.CODE_DIS)
+        self.dis = DIS(opt=opt)
+        self.option = None
+
 class ICMP_DIO:
 
     # The options field of the ICMP_DIO is limited to 1 option per packet. 
@@ -309,6 +327,7 @@ class ICMP_DAO_ACK:
 
     def __init__(self) -> None:
         pass
+
 
 """ Packet implementation """
 
