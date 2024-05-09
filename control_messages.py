@@ -31,8 +31,6 @@ class ICMP_header:
         # Checksum and options not included. Base field is implemented at a higher level.
         # Refer https://datatracker.ietf.org/doc/html/rfc6550#section-6
 
-        # TODO Check for ICMP type = 155 in message handler
-        # TODO Check ICMP code. If unknown, the discard. 
 
 
 

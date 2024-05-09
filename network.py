@@ -112,11 +112,25 @@ class Node:
                     neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
         return neighbors_metric_object
 
+
     def unicast_packet(self, destination, packet): # Destination must be the receiving node_id
         # Unicast a message to a neighbor
         for neighbor in self.neighbors:
             if neighbor[0].node_id == destination:
                 neighbor[0].input_msg_queue.put(packet)
+
+
+    def unicast_dio(self, rpl_instance_id, dodag: Dodag, destination):
+        icmp_dio = ICMP_DIO(rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
+        if defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_HOPCOUNT:
+            icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
+            pass
+        elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_ETX:
+            icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
+            pass
+        packet = Packet(self.node_id, icmp_dio)
+        self.unicast_packet(destination, packet)
+
 
     def broadcast_packet(self, packet):
         # broadcast message to all neighbors 
@@ -126,6 +140,7 @@ class Node:
     # def debug_print_neighbors(self):
     #     for nabo in self.neighbors:
     #         print(f"neighbor node: {nabo[0].node_id}, conection to:{nabo[1].from_node}, connection to: {nabo[1].to_node}, etx: {nabo[1].etx_value}")
+
 
     def broadcast_dio(self, rpl_instance_id, dodag: Dodag):
          # NOTE: DEN SKAL VEL BARE BROADACAST DIS TIL ALLE NODESENS GEMLE DDOAGS. MEN DET MÅ SKAL ET LAG LÆNGERE OPPE
@@ -140,14 +155,20 @@ class Node:
         packet = Packet(self.node_id, icmp_dio)
         self.broadcast_packet(packet)
     
+
     def broadcast_all_dios(self):
         for instance in self.rpl_instances:
             for dodag in instance.dodag_list:
-               self. broadcast_dio(instance.rpl_instance_id, dodag)
+               self.broadcast_dio(instance.rpl_instance_id, dodag)
+
 
     def broadcast_dis(self):
+        icmp_dis = ICMP_DIS()
+        packet = Packet(self.node_id, icmp_dis)
+        self.broadcast_packet(packet)
         pass
     
+
     def dio_handler(self, senders_node_id, dio_message: ICMP_DIO, senders_metric_object = None):
         # see section 8 in RPL standarden (RFC 6550) 
         # Ehhh:
@@ -323,6 +344,13 @@ class Node:
 
         pass
 
+    def dis_handler(self, senders_node_id):
+        # print("Debug: DIS packet received by node ", self.node_id, "from node ", senders_node_id)
+        for instance in self.rpl_instances:
+            for dodag in instance.dodag_list:
+                self.unicast_dio(self, self.rpl_instances.rpl_instance_id, dodag, senders_node_id)
+
+
     def packet_handler(self, packet: Packet):
         # Read ICMP Header:
         #print(f"yesdu: {packet}")
@@ -332,13 +360,15 @@ class Node:
             return
         if icmp_header.code == defines.CODE_DIO:
             self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.option)
-            pass # TODO
         elif icmp_header.code == defines.CODE_DAO:
             pass # TODO
         elif icmp_header.code == defines.CODE_DAO_ACK:
             pass # TODO
         elif icmp_header.code == defines.CODE_DIS:
-            pass # TODO
+            self.dis_handler(packet.src_node_id)
+        else:
+            # Unknown ICMP code - ignore it
+            return
 
 
     def run(self, env):  # Simpy process
@@ -354,7 +384,7 @@ class Node:
                     # broadcast_dio() # TODO - NODEN SKAL VEL BROADCASTE ALLE DENS DODAGS TIL ALLE DENS CONNECTIONS
                     # print("debug: Node: timeout!") TODO fjerne udkommenteringen
                     self.broadcast_all_dios()
-                    
+
                     pass
                 else: # event was a "message in input_msg_queue" event
                     # TODO HVIS DET DER IF ELSE HALLØJ MED event.values() GIVER FEJL, SÅ PRØV TRY EXECPT
