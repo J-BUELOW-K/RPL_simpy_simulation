@@ -626,7 +626,7 @@ class Network:
 
         # set up a list containing all edges.
         edges = []
-    
+        
         for node in self.nodes[1:]:
             child = node.node_id
             parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
@@ -641,21 +641,28 @@ class Network:
 
         color_map = []
         edgde_colors = [] 
+        edgde_alphas = []
+        node_IDs = []
+
         for nodex in G.nodes():
             for node in self.nodes:
                 try:
                     rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
                     if node.node_id == nodex:
+                        node_IDs.append(node.node_id)
                         if node.alive:
-                            color_map.append('tab:olive' if rank == defines.ROOT_RANK else 'tab:blue')
-                            edgde_colors.append('k')
+                            if rank == defines.ROOT_RANK:
+                                color_map.append('tab:olive')
+                            else:
+                                color_map.append('tab:blue')
+                                edgde_alphas.append(1)
                         else:
                             color_map.append('tab:red')
-                            edgde_colors.append('w')
+                            edgde_alphas.append(0)
                 except IndexError:
+                    print("IndexError")
                     pass
-
-        nx.draw_networkx_edges(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, edge_color=edgde_colors)
+        nx.draw_networkx_edges(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, alpha=edgde_alphas)
         nx.draw_networkx_nodes(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, node_color=color_map)
         nx.draw_networkx_labels(G, flipped_poss, font_size=defines.LABLE_SIZE)
 

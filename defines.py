@@ -15,7 +15,7 @@ RADIUS = 0.2
 
 NODE_TRANSMIT_TIMER = 5 # Periodic transmit timer - in simpy time units
 NODE_TRANSMIT_TIMER_JITTER = 2 # Jitter for the periodic transmit timer - in simpy time units  VERY IMPORTANT! WITHOUT JITTER, ALL NODES WILL TRANSMIT AT THE SAME TIME WHICH WILL BREAKS STUFF
-NODE_KILL_PROBABILITY = 0.1 # Probability that a node will die (stop transmitting) - this is used to simulate node death
+NODE_KILL_PROBABILITY = 0.05 # Probability that a node will die (stop transmitting) - this is used to simulate node death
 NODE_REVIVE_PROBABILITY = 0.5 # Probability that a node will revive (start transmitting) - this is used to simulate node death
 
 
