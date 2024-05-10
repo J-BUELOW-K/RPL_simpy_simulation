@@ -121,11 +121,11 @@ class Node:
                     return "nothing" # dont kill the root node
         change = False
         if self.alive:
-            if random.random() < NODE_KILL_PROBABILITY:
+            if random.random() < defines.NODE_KILL_PROBABILITY:
                 self.kill_node()
                 change = True
         if not change and not self.alive:
-            if random.random() < NODE_REVIVE_PROBABILITY:
+            if random.random() < defines.NODE_REVIVE_PROBABILITY:
                 self.revive_node()
                 change = True
         
@@ -586,7 +586,7 @@ class Network:
         nx.draw_networkx_edges(self.networkx_graph, poss, node_size=defines.NETWORK_NODE_SIZE)
         nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=defines.NETWORK_NODE_SIZE, node_color=color_map)
         plt.legend([ "Connection","Root"])
-        nx.draw_networkx_labels(self.networkx_graph, poss, font_size=LABLE_SIZE)
+        nx.draw_networkx_labels(self.networkx_graph, poss, font_size=defines.LABLE_SIZE)
 
         # Draw ETX edge labels:
         # etx_labels = {}
@@ -626,20 +626,21 @@ class Network:
 
         # set up a list containing all edges.
         edges = []
+    
         for node in self.nodes[1:]:
             child = node.node_id
-            if node.alive:
-                parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
-                edges.append((child, parent))
-            else:
-                pass
+            parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
+            edges.append((child, parent))
+                
+
        
         # plot the DODAG using networkx and graphviz
-        G = nx.DiGraph(edges)
+        G = nx.DiGraph((edges))
         poss = graphviz_layout(G, prog="dot") 
         flipped_poss = {node: (x,-y) for (node, (x,y)) in poss.items()}
 
         color_map = []
+        edgde_colors = [] 
         for nodex in G.nodes():
             for node in self.nodes:
                 try:
@@ -647,12 +648,14 @@ class Network:
                     if node.node_id == nodex:
                         if node.alive:
                             color_map.append('tab:olive' if rank == defines.ROOT_RANK else 'tab:blue')
+                            edgde_colors.append('k')
                         else:
                             color_map.append('tab:red')
+                            edgde_colors.append('w')
                 except IndexError:
                     pass
 
-        nx.draw_networkx_edges(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE)
+        nx.draw_networkx_edges(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, edge_color=edgde_colors)
         nx.draw_networkx_nodes(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, node_color=color_map)
         nx.draw_networkx_labels(G, flipped_poss, font_size=defines.LABLE_SIZE)
 
