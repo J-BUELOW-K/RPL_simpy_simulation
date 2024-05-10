@@ -8,8 +8,12 @@ import math
 from dodag import Rpl_Instance, Dodag, generate_linklocal_ipv6_address
 from control_messages import *
 from OF0 import of0_compute_rank, of0_compare_parent, DAGRank
-from defines import *
+import defines
 from networkx.drawing.nx_agraph import graphviz_layout
+
+from rich.console import Console
+from rich.table import Table
+from rich.terminal_theme import MONOKAI
 
 
 SPEED_OF_LIGHT = 299792458
@@ -152,25 +156,40 @@ class Node:
 
     def increment_metric_object_from_neighbor(self, neighbors_metric_object, neighbors_node_id): # helper function used to increment a metric object recieved from a neighbor - to include path from neighbor to this node
         #print(f"debug: nabo objekt:{neighbors_metric_object}")
-        if METRIC_OBJECT_TYPE == METRIC_OBJECT_NONE:
+        if defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_NONE:
             return None
-        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+        elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_HOPCOUNT:
             neighbors_metric_object.cumulative_hop_count += 1
-        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
+        elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_ETX:
             for neighbor in self.neighbors:
                 if neighbor[0].node_id == neighbors_node_id:
                     neighbors_metric_object.cumulative_etx += neighbor[1].etx_value
         return neighbors_metric_object
-                    
+
+      
     def unicast_packet(self, destination, packet): # Destination must be the receiving node_id
         # Unicast a message to a neighbor
         for neighbor in self.neighbors:
             if neighbor[0].node_id == destination:
                 neighbor[0].input_msg_queue.put(packet)
 
+
+    def unicast_dio(self, rpl_instance_id, dodag: Dodag, destination):
+        icmp_dio = ICMP_DIO(rpl_instance_id, dodag.dodag_version_num, dodag.rank, dodag.dodag_id) # DIO message with icmp header
+        if defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_HOPCOUNT:
+            icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
+            pass
+        elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_ETX:
+            icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
+            pass
+        packet = Packet(self.node_id, icmp_dio)
+        self.unicast_packet(destination, packet)
+
+
     def broadcast_packet(self, packet):
         # broadcast packet to all neighbors 
         for neighbor in self.neighbors:
+
             neighbor[0].input_msg_queue.put(packet)   # some simpy examples yield at put(), some dont 
     
     def broadcast_all_dios(self): # for all the dodags, broadcast dio messages
@@ -178,10 +197,10 @@ class Node:
             for dodag in instance.dodag_list:
                 icmp_dio = ICMP_DIO(instance.rpl_instance_id, dodag.dodag_version_num, dodag.rank, 
                                     dodag.dodag_id, prefix=self.ipv6_address, prefix_len=self.ipv6_address_prefix_len) # DIO message with icmp header
-                if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+                if defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_HOPCOUNT:
                     icmp_dio.add_HP_metric(dodag.metric_object.cumulative_hop_count) 
                     pass
-                elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
+                elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_ETX:
                     icmp_dio.add_ETX_metric(dodag.metric_object.cumulative_etx) 
                     pass
                 packet = Packet(self.node_id, icmp_dio)
@@ -205,8 +224,16 @@ class Node:
                 packet = Packet(self.node_id, icmp_dao)
                 self.unicast_packet(dodag.prefered_parent, packet)
 
+
+    def broadcast_dis(self):
+        icmp_dis = ICMP_DIS()
+        packet = Packet(self.node_id, icmp_dis)
+        self.broadcast_packet(packet)
+        pass
     
+
     def dio_handler(self, senders_node_id, dio_message: DIO, senders_metric_object = None, senders_prefix_info: Prefix_info = None):
+
         # see section 8 in RPL standarden (RFC 6550) 
 
         ####################  Find RPL Instance and Dodag in the nodes self.rpl_instaces list - If no entries, we create them ####################
@@ -235,6 +262,7 @@ class Node:
         ####################  Update timestamp for the recieved dodag  ####################  
         dodag_reference.last_dio = self.env.now # update timestamp for the recieved dodag (used in OF0)
         dodag_reference.surrounding_dodags.update({senders_node_id: self.env.now}) # update timestamp for the recieved dodag
+        
 
         ####################  Extract and save IPV6 address from senders_prefix_info #################### 
         if senders_prefix_info is not None:
@@ -401,21 +429,29 @@ class Node:
 
      
 
+    def dis_handler(self, senders_node_id):
+        # print("Debug: DIS packet received by node ", self.node_id, "from node ", senders_node_id)
+        for instance in self.rpl_instances:
+            for dodag in instance.dodag_list:
+                self.unicast_dio(self, self.rpl_instances.rpl_instance_id, dodag, senders_node_id)
+
+
     def packet_handler(self, packet: Packet):
         # Read ICMP Header:
         #print(f"yesdu: {packet}")
         icmp_header = packet.payload.icmp
-        if icmp_header.type != TYPE_RPL_CONTOL_MSG:
+        if icmp_header.type != defines.TYPE_RPL_CONTOL_MSG:
             # invalid packet - ignore it
             return
         if icmp_header.code == defines.CODE_DIO:
             self.dio_handler(packet.src_node_id, packet.payload.dio, packet.payload.metric_option, packet.payload.prefix_option)
-            pass # TODO
         elif icmp_header.code == defines.CODE_DAO:
             self.dao_handler(packet.src_node_id, packet.payload.dao, packet.payload.targets)
-            pass 
         elif icmp_header.code == defines.CODE_DIS:
-            pass # TODO
+            self.dis_handler(packet.src_node_id)
+        else:
+            # Unknown ICMP code - ignore it
+            return
 
 
     def run(self, env):  # Simpy process
@@ -426,7 +462,7 @@ class Node:
                 self.silent_mode = False
                 self.packet_handler(message)
             else: # if silent_mode = False
-                event = yield self.input_msg_queue.get() | env.timeout(NODE_TRANSMIT_TIMER + random.randint(-NODE_TRANSMIT_TIMER_JITTER, NODE_TRANSMIT_TIMER_JITTER), value = "timeooout")  # Periodic timer is replacement for tricle timer
+                event = yield self.input_msg_queue.get() | env.timeout(defines.NODE_TRANSMIT_TIMER + random.randint(-defines.NODE_TRANSMIT_TIMER_JITTER, defines.NODE_TRANSMIT_TIMER_JITTER), value = "timeooout")  # Periodic timer is replacement for tricle timer
                 if (next(iter(event.values())) == "timeooout"): # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                     # note: acording to the standard, a node sends a DAO if i recieves a DAO (after DAO_DELAY) or if it has updates to its downward routes. 
                     #       however, for simplicity, we simpy send a DAO using a periodic timer (just like we do for DIOs)
@@ -513,12 +549,12 @@ class Network:
                 raise ValueError 
             else:
                 # Create DODAG in root node, within the already existing RPL Instance
-                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=ROOT_RANK) # setting rank to 0 makes the node the root!
+                new_dodag = Dodag(env = self.env, dodag_id= dodag_id, dodag_version_num= dodag_version, rank=defines.ROOT_RANK) # setting rank to 0 makes the node the root!
                 root_node.rpl_instances[rpl_instance_idx].add_dodag(new_dodag)
         else:
             # No matching RPL entry exists in root node - create one! (including dodag):
             new_rpl_instance = Rpl_Instance(rpl_instance_id)
-            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = ROOT_RANK) # setting rank to 0 makes the node the root!
+            new_dodag = Dodag(env=self.env, dodag_id=dodag_id, dodag_version_num=dodag_version, rank = defines.ROOT_RANK) # setting rank to 0 makes the node the root!
             new_rpl_instance.add_dodag(new_dodag)
             root_node.rpl_instances.append(new_rpl_instance)
 
@@ -543,12 +579,12 @@ class Network:
         for node in self.nodes:
             env.process(node.run(env))
     
-    def plot(self):
+    def plot_network(self):
         poss = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
         color_map = ['tab:olive' if i == 0 else 'tab:blue' for i in range(len(self.networkx_graph.nodes()))]
 
-        nx.draw_networkx_edges(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE)
-        nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=NETWORK_NODE_SIZE, node_color=color_map)
+        nx.draw_networkx_edges(self.networkx_graph, poss, node_size=defines.NETWORK_NODE_SIZE)
+        nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=defines.NETWORK_NODE_SIZE, node_color=color_map)
         plt.legend([ "Connection","Root"])
         nx.draw_networkx_labels(self.networkx_graph, poss, font_size=LABLE_SIZE)
 
@@ -574,11 +610,8 @@ class Network:
         #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, parents_list: {node.rpl_instances[0].dodag_list[0].parents_list}, children_list: {node.rpl_instances[0].dodag_list[0].children_list}, ")
         # TODO HUSK AT NÅR VI UDSKIFTER ROUTING TABELLERNE PÆNT, FÅ OGSÅ LIGE "/[prefix length]" MED I IPV6 ADRESSEN
 
-        for node in self.nodes:
-            try:
-                print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, downward_routes: {node.rpl_instances[0].dodag_list[0].downward_routes} ")
-            except IndexError:
-                print(f"Node {node.node_id}, has no dodag")
+        # for node in self.nodes:
+        #     print(f"Node {node.node_id}, parent: {node.rpl_instances[0].dodag_list[0].prefered_parent}, downward_routes: {node.rpl_instances[0].dodag_list[0].downward_routes} ")
 
 
         if len(self.nodes) == 0:
@@ -605,7 +638,6 @@ class Network:
         G = nx.DiGraph(edges)
         poss = graphviz_layout(G, prog="dot") 
         flipped_poss = {node: (x,-y) for (node, (x,y)) in poss.items()}
-        print(flipped_poss)
 
         color_map = []
         for nodex in G.nodes():
@@ -614,15 +646,15 @@ class Network:
                     rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
                     if node.node_id == nodex:
                         if node.alive:
-                            color_map.append('tab:olive' if rank == ROOT_RANK else 'tab:blue')
+                            color_map.append('tab:olive' if rank == defines.ROOT_RANK else 'tab:blue')
                         else:
                             color_map.append('tab:red')
                 except IndexError:
                     pass
 
-        nx.draw_networkx_edges(G, flipped_poss, node_size=DODAG_NODE_SIZE)
-        nx.draw_networkx_nodes(G, flipped_poss, node_size=DODAG_NODE_SIZE, node_color=color_map)
-        nx.draw_networkx_labels(G, flipped_poss, font_size=LABLE_SIZE)
+        nx.draw_networkx_edges(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE)
+        nx.draw_networkx_nodes(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, node_color=color_map)
+        nx.draw_networkx_labels(G, flipped_poss, font_size=defines.LABLE_SIZE)
 
 
         # nx.draw(G, flipped_poss, with_labels = True, node_size=250, node_color=color_map, font_size=6, width=.7, arrowsize=7)
@@ -635,7 +667,70 @@ class Network:
             plt.show()
         else:
             plt.close()
-        
+    
+
+    def ipv6_addr_2_node_id(self, ipv6_address: str) -> int:
+        for node in self.nodes:
+            if node.ipv6_address == ipv6_address:
+                return node.node_id
+        return None
+
+    # prints routing tabels for all nodes in the network (in the specified dodag) to a .txt file
+    def print_resulting_routing_tables(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, file_name = "routing_tables.txt"): 
+
+        with open(file_name, "wt") as report_file:
+            console = Console(file=report_file)
+
+            for node in self.nodes:
+
+#                table = Table(show_header=True, header_style="bold dark_orange3", show_lines=True)
+                table = Table(show_header=True, header_style="bold dark_orange3") # (header_style dosent work when saving to txt file)
+
+                rpl_instance_idx, dodag_list_idx = find_dodag(node.rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version)
+                if (rpl_instance_idx == None) or (dodag_list_idx == None):
+                    raise ValueError("No Dodag to print with the provided IDs and version.")
+                intance_reference = node.rpl_instances[rpl_instance_idx]
+                dodag_reference = intance_reference.dodag_list[dodag_list_idx]
+
+                table.add_column(f"Node ID: {node.node_id}", style="dim", width=12)
+                table.add_column("Dest. (IPv6)", justify="left")
+                table.add_column("Dest. (ID)", justify="left")
+                table.add_column("Next Hop (IPv6)", justify="left")
+                table.add_column("Next Hop (ID)", justify="left")
+                for dest_ipv6_address in dodag_reference.downward_routes.keys():
+                    table.add_row(
+                        "", 
+                        str(dest_ipv6_address).upper() + "/" + str(defines.IPV6_ADDRESS_PREFIX_LEN), 
+                        str(self.ipv6_addr_2_node_id(dest_ipv6_address)),  
+                        str(dodag_reference.downward_routes[dest_ipv6_address]).upper() + "/" + str(defines.IPV6_ADDRESS_PREFIX_LEN),
+                        str(self.ipv6_addr_2_node_id(dodag_reference.downward_routes[dest_ipv6_address])),  
+                    )
+                console.print(table)
+                #console.save_svg(f"example{node.node_id}.svg", theme=MONOKAI)
+
+
+
+        # table.add_column("Node_id: 3", style="dim", width=12)
+        # table.add_column("Destination IPv6 Prefix", justify="right")
+        # table.add_column("(Destination node_id)", justify="right")
+        # table.add_column("Next Hop", justify="right")
+        # table.add_row(
+        #     "", "Star Wars: The Rise of Skywalker", "$275,000,000"
+        # )
+        # table.add_row(
+        #     "",
+        #     "[red]Solo[/red]: A Star Wars Story",
+        #     "$275,000,000"
+        # )
+        # table.add_row(
+        #     "",
+        #     "Star Wars Ep. VIII: The Last Jedi",
+        #     "$262,000,000",
+        # )
+
+        # console.print(table)
+
+
 
 
     def at_interval_plot(self, rpl_instance_id, dodag_id, dodag_version, interval):
