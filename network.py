@@ -381,7 +381,73 @@ class Network:
         idx = 0
         while True:
             yield self.env.timeout(interval)
-            self.plot_resulting_dodag(rpl_instance_id,dodag_id,dodag_version, idx, show=False)
-            self.plot_network()
+            
+            self.plot_network_and_dodag(rpl_instance_id, dodag_id, dodag_version, idx, show=True)
+            #self.plot_resulting_dodag(rpl_instance_id,dodag_id,dodag_version, idx, show=False)
+            #self.plot_network()
             idx += 1
+            for node in self.nodes:
+                node.determine_if_to_kill_or_revive()
+            
+            #plt.show()
+            
+            
+            
+
+    def plot_network_and_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr = "", show = True, save = False):
+        fig, axs = plt.subplots(1, 2, figsize=(15, 7))  # Create a figure and a set of subplots
+        self.debug_print()
+        # Plot network
+        poss = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
+        color_map = ['tab:olive' if i == 0 else 'tab:red' if self.nodes[i].alive is False else 'tab:blue' for i in range(len(self.networkx_graph.nodes()))]
+        nx.draw_networkx_edges(self.networkx_graph, poss, node_size=defines.NETWORK_NODE_SIZE, ax=axs[0])
+        nx.draw_networkx_nodes(self.networkx_graph, poss, node_size=defines.NETWORK_NODE_SIZE, node_color=color_map, ax=axs[0])
+        nx.draw_networkx_labels(self.networkx_graph, poss, font_size=defines.LABLE_SIZE, ax=axs[0])
+        axs[0].set_title("Network")
+
+        # Plot DODAG
+        rpl_instances = self.nodes[0].rpl_instances
+        rpl_instance_idx, dodag_list_idx = find_dodag(rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version)
+        if (rpl_instance_idx == None) or (dodag_list_idx == None):
+            raise ValueError("No Dodag to print with the provided IDs and version.")
+        edges = []
+        for node in self.nodes[1:]:
+            child = node.node_id
+            try:
+                parent = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].prefered_parent
+            except IndexError:
+                parent = child
+            edges.append((child, parent))
+        G = nx.DiGraph((edges))
+        poss = graphviz_layout(G, prog="dot") 
+        flipped_poss = {node: (x,-y) for (node, (x,y)) in poss.items()}
+        color_map = []
+        edgde_alphas = []
+        node_IDs = []
+        for nodex in G.nodes():
+            for node in self.nodes:
+                try:
+                    rank = node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank
+                    if node.node_id == nodex:
+                        node_IDs.append(node.node_id)
+                        if node.alive:
+                            if rank == defines.ROOT_RANK:
+                                color_map.append('tab:olive')
+                            else:
+                                color_map.append('tab:blue')
+                                edgde_alphas.append(1)
+                        else:
+                            color_map.append('tab:red')
+                            edgde_alphas.append(0)
+                except IndexError:
+                    pass
+        nx.draw_networkx_edges(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, alpha=edgde_alphas, ax=axs[1])
+        nx.draw_networkx_nodes(G, flipped_poss, node_size=defines.DODAG_NODE_SIZE, node_color=color_map, ax=axs[1])
+        nx.draw_networkx_labels(G, flipped_poss, font_size=defines.LABLE_SIZE, ax=axs[1])
+        axs[1].set_title("Dodag")
+
+        if save is True:
+            plt.savefig(f"CombinedGraph{nr}.jpg", format="JPG", dpi=200)
+
+        if show is True:
             plt.show()

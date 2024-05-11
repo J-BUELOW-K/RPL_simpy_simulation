@@ -71,6 +71,13 @@ class Dodag:
         elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
             self.metric_object = control_messages.ETX_OBJ(0) # init ETX to 0
             
+        self.secondary_metric_object = None
+        if METRIC_OBJECT_TYPE == METRIC_OBJECT_HOPCOUNT:
+            self.secondary_metric_object = control_messages.HP_OBJ(0) # init hopcount to 0
+        elif METRIC_OBJECT_TYPE == METRIC_OBJECT_ETX:
+            self.secondary_metric_object = control_messages.ETX_OBJ(0) # init ETX to 0
+        
+        
         self.surrounding_dodags = {} # dict of dodag_ids of surrounding dodags and their timestamps
 
         self.dao_sequence = 0 # init to 0

@@ -18,7 +18,7 @@ def main():
     nw = Network(env)
 
     nw.generate_nodes_and_edges(defines.NUMBER_OF_NODES, defines.RADIUS)
-    nw.plot_network()
+    #nw.plot_network()
 
     nw.register_node_processes(env)
     nw.construct_new_dodag(rpl_instance, dodag_id, dodag_version)

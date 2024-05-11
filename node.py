@@ -62,6 +62,7 @@ class Node:
 
     def kill_node(self):
         self.alive = False
+
     
     def revive_node(self):
         self.alive = True
@@ -221,8 +222,19 @@ class Node:
                 self.promote_secondary_parent(self.response_received[1])
     
     def promote_secondary_parent(self, dodag_reference):
+        dodag_reference.prefered_parent_rank = dodag_reference.secondary_rank
         dodag_reference.preferred_parent = dodag_reference.secondary_parent
+        dodag_reference.metric_object = copy.deepcopy(dodag_reference.secondary_metric_object)
+        
+        dodag_reference.secondary_metric_object = None
+        if defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_HOPCOUNT:
+            dodag_reference.secondary_metric_object = HP_OBJ(0) # init hopcount to 0
+        elif defines.METRIC_OBJECT_TYPE == defines.METRIC_OBJECT_ETX:
+            dodag_reference.secondary_metric_object = ETX_OBJ(0) # init ETX to 0
         dodag_reference.secondary_parent = None
+        dodag_reference.secondary_rank = defines.INFINITE_RANK
+        
+        dodag_reference.rank = of0_compute_rank(dodag_reference.prefered_parent_rank, dodag_reference.metric_object)
     
  ###################### TESTING FUNCTIONS ######################
     # The dio_handler function is responsible for handling DIO messages. It first finds or creates the DODAG, then updates the DODAG timestamp, prefix info, and preferred parent.
@@ -345,16 +357,17 @@ class Node:
     # This function sets the secondary parent of a DODAG
     def set_secondary_parent(self, dodag_reference, parent_node_id, parent_rank, metric_object):
         # Set the secondary parent, its rank, and its metric object
-        dodag_reference.secondary_parent = parent_node_id
-        dodag_reference.secondary_parent_rank = parent_rank
-        dodag_reference.secondary_metric_object = metric_object
-        # Compute and set the secondary rank of the DODAG
-        dodag_reference.secondary_rank = of0_compute_rank(dodag_reference.secondary_parent_rank, dodag_reference.secondary_metric_object)
+        if dodag_reference.prefered_parent != parent_node_id: 
+            dodag_reference.secondary_parent = parent_node_id
+            dodag_reference.secondary_rank = parent_rank
+            dodag_reference.secondary_metric_object = metric_object
+            # Compute and set the secondary rank of the DODAG
+        dodag_reference.secondary_rank = of0_compute_rank(dodag_reference.secondary_rank, dodag_reference.secondary_metric_object)
 
     # This function compares and updates the secondary parent of a DODAG
     def compare_and_update_secondary_parent(self, dodag_reference, potential_parent_node_id, potential_parent_rank, metric_object):
         # Compare the potential parent with the current secondary parent
-        result, winner_rank = of0_compare_parent(dodag_reference.secondary_parent_rank, potential_parent_rank, dodag_reference.secondary_metric_object, metric_object)
+        result, winner_rank = of0_compare_parent(dodag_reference.secondary_rank, potential_parent_rank, dodag_reference.secondary_metric_object, metric_object)
         # If the result is to update the parent
         if result == "update parent":
             # Set the potential parent as the secondary parent
@@ -610,7 +623,7 @@ class Node:
                         # event was a timeout event. (https://stackoverflow.com/questions/21930498/how-to-get-the-first-value-in-a-python-dictionary)
                         # note: acording to the standard, a node sends a DAO if i recieves a DAO (after DAO_DELAY) or if it has updates to its downward routes. 
                         #       however, for simplicity, we simply send a DAO using a periodic timer (just like we do for DIOs)
-                    self.determine_if_to_kill_or_revive() # simulate node death/revival
+                    #self.determine_if_to_kill_or_revive() # simulate node death/revival
                     print(f"debug: {self.node_id}: RPL tricle timer")
                     if self.alive:
                         self.broadcast_all_dios()
