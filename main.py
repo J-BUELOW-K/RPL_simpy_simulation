@@ -1,5 +1,5 @@
 import simpy
-from network import *
+from network import Network
 import defines
 
 
@@ -25,7 +25,7 @@ def main():
 
     # Execute simulation
 
-    env.process(nw.at_interval_plot(rpl_instance, dodag_id, dodag_version,100))
+    env.process(nw.at_interval_plot(rpl_instance, dodag_id, dodag_version,1000))
     env.run(until=defines.SIM_TIME) 
 
     nw.print_resulting_routing_tables(rpl_instance, dodag_id, dodag_version)

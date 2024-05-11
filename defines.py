@@ -9,14 +9,20 @@ CODE_DAO_ACK = 3
 TYPE_RPL_CONTOL_MSG = 155
 
 """Network defines"""
-SIM_TIME = 500
+SIM_TIME = 5000 # Simulation time - in simpy time units
 NUMBER_OF_NODES = 50
 RADIUS = 0.2
 
-NODE_TRANSMIT_TIMER = 5 # Periodic transmit timer - in simpy time units
-NODE_TRANSMIT_TIMER_JITTER = 2 # Jitter for the periodic transmit timer - in simpy time units  VERY IMPORTANT! WITHOUT JITTER, ALL NODES WILL TRANSMIT AT THE SAME TIME WHICH WILL BREAKS STUFF
+NODE_TRANSMIT_TIMER = 100 # Periodic transmit timer - in simpy time units
+NODE_TRANSMIT_TIMER_JITTER = 8 # Jitter for the periodic transmit timer - in simpy time units  VERY IMPORTANT! WITHOUT JITTER, ALL NODES WILL TRANSMIT AT THE SAME TIME WHICH WILL BREAKS STUFF
 NODE_KILL_PROBABILITY = 0.05 # Probability that a node will die (stop transmitting) - this is used to simulate node death
 NODE_REVIVE_PROBABILITY = 0.5 # Probability that a node will revive (start transmitting) - this is used to simulate node death
+
+DIO_RESPONSE_WAIT_TIME = 15 # Time to wait for DIO response after sending a DIS - in simpy time units
+
+DIS_TRANSMIT_TIMER = 30 # Periodic transmit timer for DIS - in simpy time units
+DIS_TRANSMIT_TIMER_JITTER = 4 # Jitter for the periodic transmit timer for DIS - in simpy time units
+
 
 
 """dodag defines"""
