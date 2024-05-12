@@ -50,9 +50,9 @@ def of0_compute_rank(parent_rank, metric_object = None):
     if metric_object is None:
         step_of_rank = defines.DEFAULT_STEP_OF_RANK
     elif isinstance(metric_object, HP_OBJ):
-        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//4)) # or 'log' or 'sigmoid'
+        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.MAX_CUMU_HOP_COUNT)) # or 'log' or 'sigmoid'
     elif isinstance(metric_object, ETX_OBJ):
-        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='linear', max_value = 120000) # or 'log' or 'sigmoid'
+        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='linear', max_value = defines.MAX_CUMU_ETX) # or 'log' or 'sigmoid'
     else:
         raise ValueError("Invalid metric object type")
     

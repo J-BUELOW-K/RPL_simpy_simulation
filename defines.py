@@ -38,7 +38,10 @@ DEFAULT_MIN_HOP_RANK_INCREASE = 256 # (defined in sec 18.2.8 in rfc6550)
 METRIC_OBJECT_NONE = 0
 METRIC_OBJECT_HOPCOUNT = 1
 METRIC_OBJECT_ETX = 2
-METRIC_OBJECT_TYPE = METRIC_OBJECT_ETX # This is the metric object that the simulation will use - choose either of the above
+METRIC_OBJECT_TYPE = METRIC_OBJECT_NONE # This is the metric object that the simulation will use - choose either of the above
+
+MAX_CUMU_HOP_COUNT = NUMBER_OF_NODES//4
+MAX_CUMU_ETX = 120000
 
 """imaginary ISP "assigned" network prefix for ipv6 global unicast address (used for the node)"""
 IPV6_GLOBAL_UCAST_NETWORK_PREFIX = "2001:db8:0:1" # (subnet is simply set to 1)
