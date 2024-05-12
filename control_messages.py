@@ -85,24 +85,11 @@ class DIO:
 
     # Options field is implemented in the ICMP_DIO
 
-    def __init__(self, rpl_instance_id: int, vers: int, rank: int, dodag_id: int, g_flag: bool = True, \
-                 mop = 0, prf = 0, dtsn = 0, flags = 0, reserved = 0):
+    def __init__(self, rpl_instance_id: int, vers: int, rank: int, dodag_id: int):
 
         self.rpl_instance_id = rpl_instance_id      # Set by the DODAG root and indicate which RPL Instance the DODAG is a part of.
         self.vers = vers                            # Unsigned integer set by the DODAG root to the DODAGVersionNumber           
         self.rank = rank                            # Unsigned integer indicating the DODAG Rank of the node sending the DIO message
-        self.g_flag = g_flag                        # The Grounded 'G' flag indicates whether the DODAG advertised can satisfy the 
-                                                    # application-defined goal. If the flag is set, the DODAG is grounded. If the 
-                                                    # flag is cleared, the DODAG is floating.
-        self.mop = mop                              # The Mode of Operation (MOP) field identifies the mode of operation of the RPL 
-                                                    # Instance as administratively provisioned at and distributed by the DODAG root.  
-                                                    # All nodes who join the DODAG must be able to honor the MOP in order to fully 
-                                                    # participate as a router, or else they must only join as a leaf.
-        self.prf = prf                              # DODAGPreference (Prf): A 3-bit unsigned integer that defines how preferable the
-                                                    # root of this DODAG is compared to other DODAG roots within the instance
-        self.dtsn = dtsn                            # Unsigned integer set by the node issuing the DIO message
-        self.flags = flags                          # MUST be set to 0 by sender and ignored by receiver. 
-        self.reserved = reserved                    # MUST be set to 0 by sender and ignored by receiver.
         self.dodag_id = dodag_id                    # IPv6 address set by a DODAG root that uniquely identifies a DODAG. The DODAGID 
                                                     # MUST be a routable IPv6 address belonging to the DODAG root.
         
@@ -114,10 +101,8 @@ class DIO:
             raise ValueError("Version MUST be an unsigned int")
         if self.rank < 0:
             raise ValueError("Rank MUST be an unsigned int")
-        if not (type(self.g_flag) == bool):
-            raise TypeError("Must be a bool and not a ", type(self.g_flag))
 
-        # All fields included, however not all are necessarily used.
+        # Unused field has been omitted.
         # Reference: https://datatracker.ietf.org/doc/html/rfc6550#section-6.3
 
 
@@ -145,9 +130,8 @@ class DAO:
     def __init__(self, rpl_instance_id, dodag_id, dodag_version, dao_sequence = 0):
         
         self.rpl_instance_id = rpl_instance_id      # Topology instance associated with the DODAG, as learned from the DIO.
-        self.dao_sequence = dao_sequence            # Incremented at each unique DAO message from a node and echoed in the DAO-ACK message.
-        self.dodag_id = dodag_id                    # Unsigned integer set by a DODAG root that uniquely identifies a DODAG. This field is only
-                                                    # present when the 'D' flag is set.
+        self.dao_sequence = dao_sequence            # Incremented at each unique DAO message from a node.
+        self.dodag_id = dodag_id                    # Unsigned integer set by a DODAG root that uniquely identifies a DODAG.
         self.dodag_version = dodag_version          # note: THIS IS NOT A PART OF THE STANDARD. we added it to simplify the implementation
     
     # k flag, d flag and flags fields are not used and has been omitted.
