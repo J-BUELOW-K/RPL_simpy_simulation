@@ -650,4 +650,5 @@ class Node:
                     print(f"debug: {self.node_id}: DIS timer")
                     #self.determine_if_to_kill_or_revive()
                     if self.alive:
-                        self.unicast_dis()
+                        self.broadcast_dis()
+                        #self.unicast_dis()

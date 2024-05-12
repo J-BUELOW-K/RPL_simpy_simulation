@@ -18,7 +18,7 @@ NODE_TRANSMIT_TIMER_JITTER = 8 # Jitter for the periodic transmit timer - in sim
 NODE_KILL_PROBABILITY = 0.05 # Probability that a node will die (stop transmitting) - this is used to simulate node death
 NODE_REVIVE_PROBABILITY = 0.5 # Probability that a node will revive (start transmitting) - this is used to simulate node death
 
-DIO_RESPONSE_WAIT_TIME = 15 # Time to wait for DIO response after sending a DIS - in simpy time units
+DIO_RESPONSE_WAIT_TIME = 20 # Time to wait for DIO response after sending a DIS - in simpy time units
 
 DIS_TRANSMIT_TIMER = 30 # Periodic transmit timer for DIS - in simpy time units
 DIS_TRANSMIT_TIMER_JITTER = 4 # Jitter for the periodic transmit timer for DIS - in simpy time units

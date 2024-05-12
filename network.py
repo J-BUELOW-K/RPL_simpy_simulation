@@ -394,7 +394,7 @@ class Network:
             
             
 
-    def plot_network_and_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr = "", show = True, save = False):
+    def plot_network_and_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr = "", show = True, save = True):
         fig, axs = plt.subplots(1, 2, figsize=(15, 7))  # Create a figure and a set of subplots
         self.debug_print()
         # Plot network

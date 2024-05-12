@@ -52,7 +52,7 @@ def of0_compute_rank(parent_rank, metric_object = None):
     elif isinstance(metric_object, HP_OBJ):
         step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_hop_count, method='log', max_value=(defines.NUMBER_OF_NODES//4)) # or 'log' or 'sigmoid'
     elif isinstance(metric_object, ETX_OBJ):
-        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='linear', max_value = 160000) # or 'log' or 'sigmoid'
+        step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='linear', max_value = 170000) # or 'log' or 'sigmoid'
     else:
         raise ValueError("Invalid metric object type")
     
@@ -82,7 +82,8 @@ def of0_compare_parent(current_parent_rank, challenger_rank,
     rank_through_current_parent = of0_compute_rank(current_parent_rank, metric_object_through_current_parrent)
     rank_through_challenger_parent = of0_compute_rank(challenger_rank, metric_object_through_challenger)
 
-    if DAGRank(rank_through_challenger_parent) < DAGRank(rank_through_current_parent):    # only choose challenger parent as new prefered parent IF it results in a better DAGRank (if equal, keep current parent)
+    #if DAGRank(rank_through_challenger_parent) < DAGRank(rank_through_current_parent):    # only choose challenger parent as new prefered parent IF it results in a better DAGRank (if equal, keep current parent)
+    if rank_through_challenger_parent < rank_through_current_parent:    # only choose challenger parent as new prefered parent IF it results in a better DAGRank (if equal, keep current parent)
         # note, DAGRank() is used when comparing ranks (see RPL standard)
         return "update parent", rank_through_challenger_parent
     else:
