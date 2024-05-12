@@ -159,12 +159,6 @@ class Node:
 
         intance_reference = self.rpl_instances[rpl_instance_idx]
         dodag_reference = intance_reference.dodag_list[dodag_list_idx]
-        
-
-        ####################  Update timestamp for the recieved dodag  ####################  
-        dodag_reference.last_dio = self.env.now # update timestamp for the recieved dodag (used in OF0)
-        dodag_reference.surrounding_dodags.update({senders_node_id: self.env.now}) # update timestamp for the recieved dodag
-        
 
         ####################  Extract and save IPV6 address from senders_prefix_info #################### 
         if senders_prefix_info is not None:

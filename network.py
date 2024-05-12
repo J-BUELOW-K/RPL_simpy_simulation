@@ -80,7 +80,7 @@ class Network:
 
         # Generate geometric network (nodes are places at random, edges are drawn if within radius):
         while(True):
-            self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed)  # TODO: DET KAN VÆRE VI SKAL LAVE VORES EGEN AF DEN HER. FRA OPGAVEBESKRIVELSEN: Implement and simulate a neighbor discovery mechanism that ensures that each nodeestablish connectivity with its nearest neighbors. MEN VI BESTEMMER SELV! VI LADER DEN BARE STÅ
+            self.networkx_graph = nx.random_geometric_graph(number_of_nodes, radius, seed=seed) # seed is used to make the network deterministic
             if nx.is_connected(self.networkx_graph): 
                 break #if graph is not connected, try again...
 
