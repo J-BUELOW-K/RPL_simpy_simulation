@@ -1,13 +1,11 @@
-import network
 import math
 from control_messages import HP_OBJ, ETX_OBJ
 from dodag import Dodag
 import defines
 from defines import MINIMUM_STEP_OF_RANK, MAXIMUM_STEP_OF_RANK
-#from network import Node
 
 
-# # Objective Code Point
+# Objective Code Point
 # OCP = 0
 
 
@@ -39,13 +37,7 @@ def of0_compute_rank(parent_rank, metric_object = None):
     
         # R(N) = R(P) + rank_increase where:
 
-        # rank_increase = (Rf*Sp + Sr) * MinHopRankIncrease
-        
-    # UDREGNE STEP OF RANK. ENTEN VED BRUG AF DEFAULT step_of_rank (hvis der ingen metric object gives), eller "HP" eller "ETX"
-        # måske er https://mailarchive.ietf.org/arch/msg/6tisch/ijlk2XYM6Xz7xQtTB88DMSNjRdw/ brugbar
-        # aka måske Sp = a*ETX + b .
-        # hvor man lige skal tænke over hvad a skal være (ivhertfald noget scalere ETX ned, fordi vores ETX er stor.)
-        # (husk også at step_of_rank skal være et heltal) 
+        # rank_increase = (Rf*Sp + Sr) * MinHopRankIncrease 
 
     if metric_object is None:
         step_of_rank = defines.DEFAULT_STEP_OF_RANK
@@ -55,7 +47,6 @@ def of0_compute_rank(parent_rank, metric_object = None):
         step_of_rank=map_value_to_step_of_rank(metric_object.cumulative_etx, method='linear', max_value = defines.MAX_CUMU_ETX) # or 'log' or 'sigmoid'
     else:
         raise ValueError("Invalid metric object type")
-    
 
     rank_increase = (defines.DEFAULT_RANK_FACTOR*step_of_rank + defines.DEFAULT_RANK_STRETCH) * defines.DEFAULT_MIN_HOP_RANK_INCREASE  
     new_rank =  parent_rank + rank_increase
@@ -67,17 +58,13 @@ def of0_compute_rank(parent_rank, metric_object = None):
 
         
 
-            
-    
-    
-    
+
 
     
-#def of0_compare_parent(current_parent: Node, challenger_parent: Node, ICMP_DIO, metric_object_to_challenger = None, metric_object_type = None):
+
 def of0_compare_parent(current_parent_rank, challenger_rank,
                        metric_object_through_current_parrent = None, metric_object_through_challenger = None):
     # note, "parent" in parameter names means "prefered parent"
-
 
     rank_through_current_parent = of0_compute_rank(current_parent_rank, metric_object_through_current_parrent)
     rank_through_challenger_parent = of0_compute_rank(challenger_rank, metric_object_through_challenger)
@@ -87,8 +74,6 @@ def of0_compare_parent(current_parent_rank, challenger_rank,
         return "update parent", rank_through_challenger_parent
     else:
         return "keep parent", rank_through_current_parent
-
-    #TODO: return "keep parent" or "update parent" depending on which parent is better (based on rank)
     
     
     
