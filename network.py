@@ -1,6 +1,6 @@
 
 import math
-
+import numpy as np  
 import matplotlib.pyplot as plt
 import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
@@ -74,6 +74,7 @@ class Network:
         self.env = env
         self.nodes = []
         self.connections = [] # this line is not strickly needed (is here for completeness)
+        self.convergence_time  =None
         pass
 
     def generate_nodes_and_edges(self, number_of_nodes: int, radius: float, seed = None):
@@ -201,6 +202,10 @@ class Network:
             plt.show()
         else:
             plt.close()
+            
+
+    
+        
 
 
     def plot_network_and_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr = "", show = True, save = False):
@@ -259,6 +264,8 @@ class Network:
 
         if show is True:
             plt.show()
+        else:
+            plt.close()
     
 
     def ipv6_addr_2_node_id(self, ipv6_address: str) -> int:
@@ -298,3 +305,58 @@ class Network:
                         str(self.ipv6_addr_2_node_id(dodag_reference.downward_routes[dest_ipv6_address])),  
                     )
                 console.print(table)
+
+
+    def log_node_inclusion(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version):
+        nodes_included = 0
+        rpl_instances = self.nodes[0].rpl_instances
+        rpl_instance_idx, dodag_list_idx = find_dodag(rpl_instances, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version)
+        if (rpl_instance_idx == None) or (dodag_list_idx == None):
+            raise ValueError("No Dodag to print with the provided IDs and version.")
+        for node in self.nodes:
+            try:
+                #if isinstance(self.nodes[0].rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx],Dodag):
+                if node.rpl_instances[rpl_instance_idx].dodag_list[dodag_list_idx].rank != defines.INFINITE_RANK:
+                    nodes_included += 1
+            except IndexError:
+                pass
+        if nodes_included == defines.NUMBER_OF_NODES and self.convergence_time is None:
+            self.convergence_time = self.env.now
+            print("All nodes are included in the DODAG")
+        return nodes_included
+    
+    
+    def log_dodag_information(self, env, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version):
+        self.nodes_included = []
+        while(True):
+        #print(f"hehe: {self.node_id}")
+            yield (env.timeout(1, value = "plotter" ))
+            self.nodes_included.append(self.log_node_inclusion(arg_rpl_instance_id=arg_rpl_instance_id,arg_dodag_id=arg_dodag_id, arg_dodag_version=arg_dodag_version))
+            
+    
+    def plot_dodag_inclusion(self, show = True):
+        if show is True:
+            plt.plot(self.nodes_included)
+            #plt.hlines(defines.NUMBER_OF_NODES, 0, len(self.nodes_included), colors='r', linestyles='dashed', label='All nodes included')
+            plt.vlines(self.convergence_time-1, 0, defines.NUMBER_OF_NODES, colors='r', linestyles='dashed', label=f'Convergence time {self.convergence_time}')
+            plt.legend()
+            plt.title("Number of nodes included in the DODAG")
+            plt.xlabel("Time")
+            plt.ylabel("Number of nodes included")
+            plt.show()
+        return self.convergence_time
+    
+    
+    def plot_convergence_time(self, convergence_time, nr_of_runs):
+        average = sum(convergence_time)/len(convergence_time)
+        std = np.std(convergence_time)
+        nr_of_nodes = defines.NUMBER_OF_NODES
+        plt.plot(convergence_time)
+        plt.hlines(average, 0, len(convergence_time), colors='r', linestyles='dashed', label=f'Average {average}')
+        plt.hlines(average+std, 0, len(convergence_time), colors='g', linestyles='dashed', label=f'Std {std:.2f}')
+        plt.hlines(average-std, 0, len(convergence_time), colors='g', linestyles='dashed')
+        plt.title(f"Convergence time for {nr_of_nodes} nodes in {nr_of_runs} runs")
+        plt.xlabel("Number of simulations")
+        plt.ylabel("Time")
+        plt.legend()
+        plt.show()
