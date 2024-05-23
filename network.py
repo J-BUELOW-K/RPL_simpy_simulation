@@ -75,6 +75,10 @@ class Network:
         self.nodes = []
         self.connections = [] # this line is not strickly needed (is here for completeness)
         self.convergence_time  =None
+        
+        self.messeges_sent =  np.zeros((defines.SIM_TIME, defines.NUMBER_OF_NODES))
+        self.messeges_recieved =  np.zeros((defines.SIM_TIME, defines.NUMBER_OF_NODES))
+        
         pass
 
     def generate_nodes_and_edges(self, number_of_nodes: int, radius: float, seed = None):
@@ -210,6 +214,7 @@ class Network:
 
     def plot_network_and_dodag(self, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version, nr = "", show = True, save = False):
         fig, axs = plt.subplots(1, 2, figsize=(15, 7))  # Create a figure and a set of subplots
+        plt.tight_layout(pad=1.0)  # Adjust the padding between and around subplots
         # Plot network
         poss = nx.get_node_attributes(self.networkx_graph, "pos") # pos is a dict
         color_map = ['tab:olive' if i == 0 else 'tab:red' if self.nodes[i].alive is False else 'tab:blue' for i in range(len(self.networkx_graph.nodes()))]
@@ -326,12 +331,20 @@ class Network:
         return nodes_included
     
     
+    def log_messeges(self, env):
+        idx = env.now
+        for node_idx, node in enumerate(self.nodes):
+            self.messeges_sent[idx][node_idx] = node.mesg_sent
+            self.messeges_recieved[idx][node_idx] = node.mesg_recieved
+    
+    
     def log_dodag_information(self, env, arg_rpl_instance_id, arg_dodag_id, arg_dodag_version):
         self.nodes_included = []
         while(True):
         #print(f"hehe: {self.node_id}")
             yield (env.timeout(1, value = "plotter" ))
             self.nodes_included.append(self.log_node_inclusion(arg_rpl_instance_id=arg_rpl_instance_id,arg_dodag_id=arg_dodag_id, arg_dodag_version=arg_dodag_version))
+            self.log_messeges(env)
             
     
     def plot_dodag_inclusion(self, show = True):
@@ -360,3 +373,77 @@ class Network:
         plt.ylabel("Time")
         plt.legend()
         plt.show()
+        
+    def plot_messages(self, messages_sent=None, messages_recieved=None, show = False):
+        if messages_sent is None:
+                messages_sent = self.messeges_sent
+                messages_recieved = self.messeges_recieved
+        
+        if show is True:
+            fig, axs = plt.subplots(2, 1, figsize=(15, 7))
+            # add space between the plots
+            fig.subplots_adjust(hspace=0.5)
+            
+           
+            #extract the root node only for the messages sent and recieved           
+            ms_root_nodes_at_all_times = np.array(messages_sent)[:,:,0]
+            ms_plot_root = np.average(ms_root_nodes_at_all_times, axis=0)
+            mr_root_nodes_at_all_times = np.array(messages_recieved)[:,:,0]
+            mr_plot_root = np.average(mr_root_nodes_at_all_times, axis=0)
+            ms_root_std = np.std(ms_root_nodes_at_all_times,axis=0)
+            mr_root_std = np.std(mr_root_nodes_at_all_times,axis=0)
+            
+            
+            #calculate the average of all the nodes at each time point for each run
+            ms_avg_nodes_at_all_times = np.average(np.array(messages_sent), axis=2) # the mean of all the nodes at each time point for each run
+            ms_plot_avg = np.average(ms_avg_nodes_at_all_times, axis=0)
+            mr_avg_nodes_at_all_times = np.average(np.array(messages_recieved), axis=2) # the mean of all the nodes at each time point for each run
+            mr_plot_avg = np.average(mr_avg_nodes_at_all_times, axis=0)
+            
+            ms_std_of_avg_nodes_at_all_times = np.std(np.array(ms_avg_nodes_at_all_times), axis=0) # the standard deviation of all the nodes at each time point for each run
+            mr_std_of_avg_nodes_at_all_times = np.std(np.array(mr_avg_nodes_at_all_times), axis=0) # the standard deviation of all the nodes at each time point for each run
+            
+            ms_sum_of_nodes_at_all_times = np.sum(np.array(messages_sent), axis=2) # the sum of all the nodes at each time point for each run
+            ms_plot_sum = np.average(ms_sum_of_nodes_at_all_times, axis=0)
+            
+            mr_sum_of_nodes_at_all_times = np.sum(np.array(messages_recieved), axis=2) # the sum of all the nodes at each time point for each run
+            mr_plot_sum = np.average(mr_sum_of_nodes_at_all_times, axis=0)
+            
+            
+            ms_std_of_sum_nodes_at_all_times = np.std(ms_sum_of_nodes_at_all_times, axis=0) # the standard deviation of all the nodes at each time point for each run
+            mr_std_of_sum_nodes_at_all_times = np.std(mr_sum_of_nodes_at_all_times, axis=0) # the standard deviation of all the nodes at each time point for each run
+            
+            # Plot total messages sent and recieved
+            axs[0].fill_between(np.arange(0, defines.SIM_TIME), ms_plot_sum-ms_std_of_sum_nodes_at_all_times, ms_plot_sum+ms_std_of_sum_nodes_at_all_times, alpha=0.2)
+            axs[0].plot(ms_plot_sum, label = f"Total messages sent: {ms_plot_sum[-1]:.1f}, std: {ms_std_of_sum_nodes_at_all_times[-1]:.1f}")
+            axs[0].fill_between(np.arange(0, defines.SIM_TIME), mr_plot_sum-mr_std_of_sum_nodes_at_all_times, mr_plot_sum+mr_std_of_sum_nodes_at_all_times, alpha=0.2)
+            axs[0].plot(mr_plot_sum, label = f"Total messages recieved: {mr_plot_sum[-1]:.1f}, std: {mr_std_of_sum_nodes_at_all_times[-1]:.1f}")
+            axs[0].legend()
+            axs[0].set_title("Total messages sent and recieved")
+            axs[0].set_xlabel("Time")
+            axs[0].set_ylabel("Number of messages")
+            
+            # Plot average messages sent and recieved
+            axs[1].fill_between(np.arange(0, defines.SIM_TIME), ms_plot_avg-ms_std_of_avg_nodes_at_all_times, ms_plot_avg+ms_std_of_avg_nodes_at_all_times, alpha=0.2)
+            axs[1].plot(ms_plot_avg, label = f"Average messages sent {ms_plot_avg[-1]:.1f}, std: {ms_std_of_avg_nodes_at_all_times[-1]:.1f}")
+            axs[1].fill_between(np.arange(0, defines.SIM_TIME), mr_plot_avg-mr_std_of_avg_nodes_at_all_times, mr_plot_avg+mr_std_of_avg_nodes_at_all_times, alpha=0.2)
+            axs[1].plot(mr_plot_avg, label = f"Average messages recieved {mr_plot_avg[-1]:.1f}, std: {mr_std_of_avg_nodes_at_all_times[-1]:.1f}")
+                        
+          #  axs[1].plot(np.mean(messages_recieved, axis=1), label = f"Average messages recieved" f" {(np.mean(messages_recieved, axis=1)[-1]):.1f}")
+            axs[1].legend()
+            axs[1].set_title("Average number of Messages sent and recieved")
+            axs[1].set_xlabel("Time")
+            axs[1].set_ylabel("Number of messages")
+            axs[1].fill_between(np.arange(0, defines.SIM_TIME), ms_plot_root-ms_root_std, ms_plot_root+ms_root_std, alpha=0.2)
+            axs[1].plot(ms_plot_root, label = f"Messages sent by Root {ms_plot_root[-1]:.1f}, std: {ms_root_std[-1]:.1f}")
+            axs[1].fill_between(np.arange(0, defines.SIM_TIME), mr_plot_root-mr_root_std, mr_plot_root+mr_root_std, alpha=0.2)
+            axs[1].plot(mr_plot_root, label = f"Messages recieved by Root {mr_plot_root[-1]:.1f}, std: {mr_root_std[-1]:.1f}")
+            axs[1].legend()
+
+            axs[1].set_xlabel("Time")
+            axs[1].set_ylabel("Number of messages")
+            
+            plt.show()
+            
+        return messages_sent, messages_recieved
+        

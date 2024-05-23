@@ -6,7 +6,9 @@ import defines
 
 def main():
     convergence_time = []
-    nr_of_runs = 100
+    messages_sent = []
+    messages_received = []
+    nr_of_runs = 1
     for i in range(nr_of_runs):
         print("hello world")
 
@@ -34,11 +36,23 @@ def main():
         nw.plot_network_and_dodag(rpl_instance, dodag_id, dodag_version, show=False, save = True)
         nw.print_resulting_routing_tables(rpl_instance, dodag_id, dodag_version)
         convergence_time.append(nw.plot_dodag_inclusion(False))
+        m_s, m_r = nw.plot_messages()
+        messages_sent.append(m_s)
+        messages_received.append(m_r)
 
     nw.plot_network_and_dodag(rpl_instance, dodag_id, dodag_version, show=True, save = True)
     nw.print_resulting_routing_tables(rpl_instance, dodag_id, dodag_version)
-    nw.plot_dodag_inclusion(True)
-    nw.plot_convergence_time(convergence_time, nr_of_runs)
+   # nw.plot_dodag_inclusion(True)
+   # nw.plot_convergence_time(convergence_time, nr_of_runs)
+   # nw.print_resulting_routing_tables
+    
+    
+    
+  
+    
+
+    nw.plot_messages(messages_sent=messages_sent, messages_recieved=messages_received, show=True)
+    
 
 if __name__ == '__main__':
     main()

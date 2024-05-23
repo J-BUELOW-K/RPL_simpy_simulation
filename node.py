@@ -30,7 +30,8 @@ class Node:
             ypos (float):  y position of the node in the network
             alive (bool, optional): If the node is alive or not. Defaults to True.
         """
-
+        self.mesg_recieved = 0
+        self.mesg_sent = 0
         # Physical network values:
         self.network = nw # network object
         self.env = env # simpy environment object
@@ -80,6 +81,7 @@ class Node:
         # Unicast a message to a neighbor
         for neighbor in self.neighbors: # go through all neighbors
             if neighbor[0].node_id == destination: # if the node_id of the neighbor matches the input node_id
+                self.mesg_sent += 1
                 neighbor[0].input_msg_queue.put(packet) # put the packet in the neighbors input message queue
 
 
@@ -96,7 +98,8 @@ class Node:
 
 
     def broadcast_packet(self, packet): 
-        # broadcast packet to all neighbors 
+        # broadcast packet to all neighbors
+        self.mesg_sent += 1 
         for neighbor in self.neighbors:
             neighbor[0].input_msg_queue.put(packet)   # some simpy examples yield at put(), some dont 
     
@@ -286,6 +289,8 @@ class Node:
         # Read ICMP Header:
         #print(f"yesdu: {packet}")
         icmp_header = packet.payload.icmp
+        self.mesg_recieved += 1
+        
         if icmp_header.type != defines.TYPE_RPL_CONTOL_MSG:
             # invalid packet - ignore it
             return
